@@ -1,0 +1,734 @@
+{
+    "success": true,
+    "date": "18042026",
+    "bankroll": 100,
+    "courses_count": 52,
+    "courses_jouees": 19,
+    "abstentions": 33,
+    "data": [
+        {
+            "reunion": "R2",
+            "course": "C1",
+            "libelle": "GRAND PRIX DES 5 ANS                    SUISSE",
+            "heure_depart": "10:45",
+            "discipline": "ATTELE",
+            "distance": 2425,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R3",
+            "course": "C1",
+            "libelle": "PRIX DU PUY DE DOME",
+            "heure_depart": "11:01",
+            "discipline": "STEEPLECHASE",
+            "distance": 4100,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 2,
+                "nom": "EARL OF SHANNON",
+                "profil": 2,
+                "jt_score": 2.3077,
+                "cote": 3,
+                "valeur_handicap": 60.5,
+                "mise_kelly": 10
+            }
+        },
+        {
+            "reunion": "R2",
+            "course": "C2",
+            "libelle": "PRIX DE L'ARBOGNE                       SUISSE",
+            "heure_depart": "11:15",
+            "discipline": "ATTELE",
+            "distance": 2350,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 1,
+                "nom": "MAMZELLE ZIZOU",
+                "profil": 2,
+                "jt_score": 3.0833,
+                "cote": 3.7,
+                "valeur_handicap": null,
+                "mise_kelly": 9
+            }
+        },
+        {
+            "reunion": "R3",
+            "course": "C2",
+            "libelle": "PRIX DES HORTENSIAS",
+            "heure_depart": "11:32",
+            "discipline": "PLAT",
+            "distance": 1000,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 3,
+            "selection": {
+                "num": 7,
+                "nom": "ZAUBERFLOTE",
+                "profil": 1,
+                "jt_score": 3,
+                "cote": 5,
+                "valeur_handicap": null,
+                "mise_kelly": 6
+            }
+        },
+        {
+            "reunion": "R2",
+            "course": "C3",
+            "libelle": "PRIX DE DIVONNE-LES-BAINS               SUISSE",
+            "heure_depart": "11:45",
+            "discipline": "ATTELE",
+            "distance": 2425,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 9,
+                "nom": "NOBLE RUSH FLEVO",
+                "profil": 1,
+                "jt_score": 2,
+                "cote": 7.8,
+                "valeur_handicap": null,
+                "mise_kelly": 3
+            }
+        },
+        {
+            "reunion": "R3",
+            "course": "C3",
+            "libelle": "PRIX DU PRINTEMPS",
+            "heure_depart": "12:01",
+            "discipline": "PLAT",
+            "distance": 2400,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 7,
+                "nom": "LAZZARO",
+                "profil": 1,
+                "jt_score": 2.1875,
+                "cote": 5.9,
+                "valeur_handicap": null,
+                "mise_kelly": 5
+            }
+        },
+        {
+            "reunion": "R2",
+            "course": "C4",
+            "libelle": "PRIX DE L'AMITIÉ FRANCO-SUISSE          SUISSE",
+            "heure_depart": "12:15",
+            "discipline": "ATTELE",
+            "distance": 3000,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 3,
+            "selection": {
+                "num": 5,
+                "nom": "INVERNO N CAVIAR",
+                "profil": 1,
+                "jt_score": 4,
+                "cote": 7.4,
+                "valeur_handicap": null,
+                "mise_kelly": 4
+            }
+        },
+        {
+            "reunion": "R3",
+            "course": "C4",
+            "libelle": "PRIX DU BOIS NOIR",
+            "heure_depart": "12:31",
+            "discipline": "HAIE",
+            "distance": 3400,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 11,
+                "nom": "QUAINT",
+                "profil": 1,
+                "jt_score": 1.9737,
+                "cote": 6,
+                "valeur_handicap": null,
+                "mise_kelly": 5
+            }
+        },
+        {
+            "reunion": "R2",
+            "course": "C5",
+            "libelle": "PRIX DE LA BROYE                        SUISSE",
+            "heure_depart": "12:47",
+            "discipline": "ATTELE",
+            "distance": 2400,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 2,
+                "nom": "KNATTIGA",
+                "profil": 1,
+                "jt_score": 2.3333,
+                "cote": 5.8,
+                "valeur_handicap": null,
+                "mise_kelly": 5
+            }
+        },
+        {
+            "reunion": "R3",
+            "course": "C5",
+            "libelle": "PRIX DU MONT PILAT",
+            "heure_depart": "13:04",
+            "discipline": "HAIE",
+            "distance": 3800,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 2,
+                "nom": "RISK OF LOVE",
+                "profil": 1,
+                "jt_score": 2,
+                "cote": 6.7,
+                "valeur_handicap": 57.5,
+                "mise_kelly": 4
+            }
+        },
+        {
+            "reunion": "R1",
+            "course": "C1",
+            "libelle": "PX DE LA VILLE D'EAUBONNE (PX D'HERNOUVILLE)",
+            "heure_depart": "13:26",
+            "discipline": "ATTELE",
+            "distance": 2875,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R3",
+            "course": "C6",
+            "libelle": "PRIX HENRI AUDRAS",
+            "heure_depart": "13:43",
+            "discipline": "HAIE",
+            "distance": 3800,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 5,
+                "nom": "KELLE KIFF",
+                "profil": 1,
+                "jt_score": 2.8,
+                "cote": 7.6,
+                "valeur_handicap": null,
+                "mise_kelly": 3
+            }
+        },
+        {
+            "reunion": "R1",
+            "course": "C2",
+            "libelle": "PX OFF. TOUR. ENGHIEN-LES BAINS",
+            "heure_depart": "14:04",
+            "discipline": "ATTELE",
+            "distance": 2875,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 12,
+                "nom": "NARCO DU CHATELET",
+                "profil": 1,
+                "jt_score": 2.5,
+                "cote": 5.7,
+                "valeur_handicap": null,
+                "mise_kelly": 5
+            }
+        },
+        {
+            "reunion": "R3",
+            "course": "C7",
+            "libelle": "PRIX DE BELLECOMBE",
+            "heure_depart": "14:19",
+            "discipline": "PLAT",
+            "distance": 1600,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 3,
+                "nom": "BOOMERANG",
+                "profil": 2,
+                "jt_score": 2.4615,
+                "cote": 4.4,
+                "valeur_handicap": 22.5,
+                "mise_kelly": 7
+            }
+        },
+        {
+            "reunion": "R1",
+            "course": "C3",
+            "libelle": "PX VILLE DE SOISY-SOUS-MONTMORENCY",
+            "heure_depart": "14:38",
+            "discipline": "ATTELE",
+            "distance": 2150,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R3",
+            "course": "C8",
+            "libelle": "PRIX DE MONPLAISIR",
+            "heure_depart": "14:53",
+            "discipline": "PLAT",
+            "distance": 1600,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 3,
+                "nom": "VICKY",
+                "profil": 1,
+                "jt_score": 2.1875,
+                "cote": 5.4,
+                "valeur_handicap": 28.5,
+                "mise_kelly": 5
+            }
+        },
+        {
+            "reunion": "R1",
+            "course": "C4",
+            "libelle": "PRIX DE L'ATLANTIQUE",
+            "heure_depart": "15:15",
+            "discipline": "ATTELE",
+            "distance": 2150,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 12,
+                "nom": "IROISE DE LA NOE",
+                "profil": 2,
+                "jt_score": 2.2308,
+                "cote": 3.7,
+                "valeur_handicap": null,
+                "mise_kelly": 9
+            }
+        },
+        {
+            "reunion": "R4",
+            "course": "C1",
+            "libelle": "PRIX DE WISSEMBOURG",
+            "heure_depart": "15:34",
+            "discipline": "PLAT",
+            "distance": 2350,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R1",
+            "course": "C5",
+            "libelle": "PRIX DE LA VILLE D'ENGHIEN-LES-BAINS",
+            "heure_depart": "15:55",
+            "discipline": "ATTELE",
+            "distance": 2875,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 5,
+                "nom": "LUPIN D'OLMEN",
+                "profil": 1,
+                "jt_score": 2.1373,
+                "cote": 7.8,
+                "valeur_handicap": null,
+                "mise_kelly": 3
+            }
+        },
+        {
+            "reunion": "R4",
+            "course": "C2",
+            "libelle": "PRIX D'ENGHIEN",
+            "heure_depart": "16:10",
+            "discipline": "HAIE",
+            "distance": 3600,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 2,
+            "selection": {
+                "num": 5,
+                "nom": "MON COMEDIEN",
+                "profil": 2,
+                "jt_score": 2.0357,
+                "cote": 3.2,
+                "valeur_handicap": null,
+                "mise_kelly": 10
+            }
+        },
+        {
+            "reunion": "R1",
+            "course": "C6",
+            "libelle": "PX VILLE ST GRATIEN (PX PORTE D'AUTEUIL)",
+            "heure_depart": "16:29",
+            "discipline": "ATTELE",
+            "distance": 2150,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R4",
+            "course": "C3",
+            "libelle": "PRIX DE LA COMMUNAUTE DES COMMUNES DE LA BASSE ZORN",
+            "heure_depart": "16:45",
+            "discipline": "PLAT",
+            "distance": 2000,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R8",
+            "course": "C8",
+            "libelle": "PRIX DU CHATEAU DE SEGRIES",
+            "heure_depart": "17:00",
+            "discipline": "ATTELE",
+            "distance": 2650,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R1",
+            "course": "C7",
+            "libelle": "PX FEDERATION FRANCAISE DE RECONVERSION",
+            "heure_depart": "17:03",
+            "discipline": "MONTE",
+            "distance": 2875,
+            "statut": "ARRIVEE_DEFINITIVE_COMPLETE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R4",
+            "course": "C4",
+            "libelle": "PRIX HYERES III",
+            "heure_depart": "17:19",
+            "discipline": "STEEPLECHASE",
+            "distance": 4200,
+            "statut": "FIN_COURSE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R1",
+            "course": "C8",
+            "libelle": "PX DE TONNAC-VILLENEUVE JOURNAL WEEK-END",
+            "heure_depart": "17:37",
+            "discipline": "ATTELE",
+            "distance": 2875,
+            "statut": "DEPART_DANS_TROIS_MINUTES",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 12,
+                "nom": "MAESTRO VRIE",
+                "profil": 2,
+                "jt_score": 2,
+                "cote": 4.6,
+                "valeur_handicap": null,
+                "mise_kelly": 6
+            }
+        },
+        {
+            "reunion": "R4",
+            "course": "C5",
+            "libelle": "PRIX DE HOERDT",
+            "heure_depart": "17:54",
+            "discipline": "PLAT",
+            "distance": 1550,
+            "statut": "ROUGE_AUX_PARTANTS",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R1",
+            "course": "C9",
+            "libelle": "PRIX ASSO PASSERELLE (PX PLACE SORBONNE)",
+            "heure_depart": "18:10",
+            "discipline": "ATTELE",
+            "distance": 2875,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R4",
+            "course": "C6",
+            "libelle": "GD CROSS STRASBOURG #4 TNC HARAS DU LION - PMU - PX M. ET M. LUTZ",
+            "heure_depart": "18:27",
+            "discipline": "CROSS",
+            "distance": 5200,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 2,
+                "nom": "JACK LUX",
+                "profil": 1,
+                "jt_score": 2.1875,
+                "cote": 5,
+                "valeur_handicap": null,
+                "mise_kelly": 6
+            }
+        },
+        {
+            "reunion": "R5",
+            "course": "C4",
+            "libelle": "BURGER KING WINNING WHOPPER APPRENTICE HANDICAP (CLASS 6)",
+            "heure_depart": "18:45",
+            "discipline": "PLAT",
+            "distance": 1000,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R4",
+            "course": "C7",
+            "libelle": "PRIX D'ALTENSTADT",
+            "heure_depart": "19:00",
+            "discipline": "PLAT",
+            "distance": 2350,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 1,
+            "selection": {
+                "num": 6,
+                "nom": "THARPE",
+                "profil": 1,
+                "jt_score": 2.4,
+                "cote": 6.6,
+                "valeur_handicap": 25,
+                "mise_kelly": 4
+            }
+        },
+        {
+            "reunion": "R5",
+            "course": "C5",
+            "libelle": "TROT TO BURGER KING LADY BAY HANDICAP (CLASS 5)",
+            "heure_depart": "19:15",
+            "discipline": "PLAT",
+            "distance": 1675,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R4",
+            "course": "C8",
+            "libelle": "PRIX DE LA BRUCHE",
+            "heure_depart": "19:30",
+            "discipline": "PLAT",
+            "distance": 3000,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R5",
+            "course": "C6",
+            "libelle": "£9 RACEDAYS AT NOTTINGHAM RACECOURSE HANDICAP (CLASS 5)",
+            "heure_depart": "19:45",
+            "discipline": "PLAT",
+            "distance": 2050,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C3",
+            "libelle": "STARTER OPTIONAL CLAIMING (3 YO - FILLIES & MARES - AWT)",
+            "heure_depart": "19:57",
+            "discipline": "PLAT",
+            "distance": 1670,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R5",
+            "course": "C7",
+            "libelle": "LADIES DAY 9TH MAY HANDICAP (CLASS 6) (DIV I)",
+            "heure_depart": "20:15",
+            "discipline": "PLAT",
+            "distance": 1675,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C4",
+            "libelle": "MAIDEN CLAIMING (3 YO & UP - AWT)",
+            "heure_depart": "20:29",
+            "discipline": "PLAT",
+            "distance": 1100,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R5",
+            "course": "C8",
+            "libelle": "LADIES DAY 9TH MAY HANDICAP (CLASS 6) (DIV II)",
+            "heure_depart": "20:45",
+            "discipline": "PLAT",
+            "distance": 1675,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C6",
+            "libelle": "PREMIO JAZZ SEIVER 2023 (2ø TURNO)",
+            "heure_depart": "20:45",
+            "discipline": "PLAT",
+            "distance": 1400,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C5",
+            "libelle": "CLAIMING (3 YO & UP - DIRT)",
+            "heure_depart": "21:01",
+            "discipline": "PLAT",
+            "distance": 1300,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C7",
+            "libelle": "PREMIO VILLAGE KING 2021",
+            "heure_depart": "21:15",
+            "discipline": "PLAT",
+            "distance": 1100,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C6",
+            "libelle": "CLAIMING (3 YO & UP - TURF)",
+            "heure_depart": "21:34",
+            "discipline": "PLAT",
+            "distance": 1700,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C8",
+            "libelle": "PREMIO J BE MALLORCA 2021",
+            "heure_depart": "21:45",
+            "discipline": "PLAT",
+            "distance": 1000,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C7",
+            "libelle": "MAIDEN SPECIAL WEIGHT (3 YO - DIRT)",
+            "heure_depart": "22:07",
+            "discipline": "PLAT",
+            "distance": 1600,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C9",
+            "libelle": "PREMIO CLÁSICO OMEGA G2 S. ( GRADE II )",
+            "heure_depart": "22:15",
+            "discipline": "PLAT",
+            "distance": 1600,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C8",
+            "libelle": "ALLOWANCE OPTIONAL CLAIMING (3 YO & UP - FILLIES & MARES - TURF)",
+            "heure_depart": "22:39",
+            "discipline": "PLAT",
+            "distance": 1700,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C10",
+            "libelle": "CLÁSICO PORTENO G3 S. ( GRADE III )",
+            "heure_depart": "22:45",
+            "discipline": "PLAT",
+            "distance": 2400,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C9",
+            "libelle": "CLAIMING (4 YO & UP -  AWT)",
+            "heure_depart": "23:11",
+            "discipline": "PLAT",
+            "distance": 1670,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C11",
+            "libelle": "PREMIO FULL NOLAN 2023",
+            "heure_depart": "23:15",
+            "discipline": "PLAT",
+            "distance": 1000,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C10",
+            "libelle": "HANDICAP (4 YO & UP - FILLIES & MARES - DIRT)",
+            "heure_depart": "23:43",
+            "discipline": "PLAT",
+            "distance": 1600,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R7",
+            "course": "C12",
+            "libelle": "PREMIO PELO PLATINADO 2024",
+            "heure_depart": "23:45",
+            "discipline": "PLAT",
+            "distance": 1000,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        },
+        {
+            "reunion": "R6",
+            "course": "C11",
+            "libelle": "MAIDEN SPECIAL WEIGHT (3 YO & UP - FILLIES & MARES - TURF)",
+            "heure_depart": "00:15",
+            "discipline": "PLAT",
+            "distance": 1500,
+            "statut": "PROGRAMMEE",
+            "candidats_eligibles_count": 0,
+            "selection": null
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test dashboard PMU</title>
+</head>
+<body style="background:#111;color:#fff;font-family:Arial;padding:20px;">
+  <h1>Test Dashboard PMU</h1>
+  <button id="btn">Lancer analyse journée</button>
+  <pre id="out" style="white-space:pre-wrap;background:#222;padding:16px;border-radius:8px;"></pre>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async () => {
+      const out = document.getElementById('out');
+      out.textContent = 'Chargement...';
+
+      try {
+        const res = await fetch('http://localhost/pmu/query_day_moulinette_summary.php?date=15042026');
+        const json = await res.json();
+        out.textContent = JSON.stringify(json, null, 2);
+      } catch (e) {
+        out.textContent = 'Erreur : ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>

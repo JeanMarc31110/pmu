@@ -1,0 +1,186 @@
+<?php
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+header('Content-Type: application/json; charset=utf-8');
+
+$dbPath = __DIR__ . '/data/pmu.sqlite';
+
+class MoulinettePMU2026PHP
+{
+    public float $bankroll;
+    public float $roi_estime = 0.4603;
+    public float $fraction_kelly = 0.5;
+    public float $cote_seuil_min = 2.0;
+    public float $max_exposition = 0.10;
+
+    public function __construct(float $capital_initial = 181.54)
+    {
+        $this->bankroll = $capital_initial;
+    }
+
+    public function calculerMise(float $coteProbable): float
+    {
+        if ($coteProbable < $this->cote_seuil_min) {
+            return 0.0;
+        }
+
+        $b = $coteProbable - 1.0;
+        $p = (1.0 + $this->roi_estime) / $coteProbable;
+        $fStar = ($p * ($b + 1.0) - 1.0) / $b;
+
+        $miseSuggeree = $this->bankroll * $fStar * $this->fraction_kelly;
+        $limiteHaute = $this->bankroll * $this->max_exposition;
+        $miseFinale = max(min($miseSuggeree, $limiteHaute), 1.0);
+
+        return round($miseFinale, 2);
+    }
+
+    public function arbitrageSelection(array $chevauxQualifies): ?array
+    {
+        if (empty($chevauxQualifies)) {
+            return null;
+        }
+
+        usort($chevauxQualifies, function ($a, $b) {
+            if ($a['profil'] !== $b['profil']) {
+                return $a['profil'] <=> $b['profil'];
+            }
+            if ($a['jt_score'] !== $b['jt_score']) {
+                return $b['jt_score'] <=> $a['jt_score'];
+            }
+            $ha = $a['valeur_handicap'] ?? -INF;
+            $hb = $b['valeur_handicap'] ?? -INF;
+            return $hb <=> $ha;
+        });
+
+        return $chevauxQualifies[0];
+    }
+}
+
+try {
+    $pdo = new PDO('sqlite:' . $dbPath);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $date = $_GET['date'] ?? null;
+    $capital = isset($_GET['capital']) ? (float)$_GET['capital'] : 181.54;
+    $reunion = $_GET['reunion'] ?? null;
+
+    if (!$date) {
+        throw new Exception("Paramètre requis : date");
+    }
+
+    $moulinette = new MoulinettePMU2026PHP($capital);
+
+    $sqlCourses = "
+        SELECT
+            c.date_course,
+            c.reunion,
+            c.course,
+            c.libelle,
+            c.heure_depart,
+            c.discipline,
+            c.specialite,
+            c.distance,
+            c.statut,
+            a.arrivee_definitive
+        FROM courses c
+        LEFT JOIN arrivees a
+          ON a.date_course = c.date_course
+         AND a.reunion = c.reunion
+         AND a.course = c.course
+        WHERE c.date_course = :date
+          AND c.statut = 'FIN_COURSE'
+    ";
+
+    $params = [':date' => $date];
+
+    if ($reunion) {
+        $sqlCourses .= " AND c.reunion = :reunion";
+        $params[':reunion'] = $reunion;
+    }
+
+    $sqlCourses .= " ORDER BY c.reunion, c.course";
+
+    $stmtCourses = $pdo->prepare($sqlCourses);
+    $stmtCourses->execute($params);
+    $courses = $stmtCourses->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmtInputs = $pdo->prepare("
+        SELECT
+            num_pmu,
+            nom,
+            profil,
+            jt_score,
+            cote_probable,
+            valeur_handicap,
+            qualifie_final
+        FROM moulinette_inputs
+        WHERE date_course = :date
+          AND reunion = :reunion
+          AND course = :course
+        ORDER BY num_pmu
+    ");
+
+    $results = [];
+
+    foreach ($courses as $course) {
+        $stmtInputs->execute([
+            ':date' => $course['date_course'],
+            ':reunion' => $course['reunion'],
+            ':course' => $course['course']
+        ]);
+
+        $rows = $stmtInputs->fetchAll(PDO::FETCH_ASSOC);
+
+        $qualifies = [];
+        foreach ($rows as $r) {
+            if ((int)$r['qualifie_final'] === 1) {
+                $qualifies[] = [
+                    'num' => (int)$r['num_pmu'],
+                    'nom' => $r['nom'],
+                    'profil' => (int)$r['profil'],
+                    'jt_score' => (float)$r['jt_score'],
+                    'cote' => (float)$r['cote_probable'],
+                    'valeur_handicap' => $r['valeur_handicap'] !== null ? (float)$r['valeur_handicap'] : null
+                ];
+            }
+        }
+
+        $choix = $moulinette->arbitrageSelection($qualifies);
+
+        $results[] = [
+            'reunion' => $course['reunion'],
+            'course' => $course['course'],
+            'libelle' => $course['libelle'],
+            'discipline' => $course['discipline'],
+            'distance' => $course['distance'],
+            'candidats_eligibles_count' => count($qualifies),
+            'selection' => $choix ? [
+                'num' => $choix['num'],
+                'nom' => $choix['nom'],
+                'profil' => $choix['profil'],
+                'jt_score' => $choix['jt_score'],
+                'cote' => $choix['cote'],
+                'valeur_handicap' => $choix['valeur_handicap'],
+                'mise_kelly' => $moulinette->calculerMise($choix['cote'])
+            ] : null
+        ];
+    }
+
+    echo json_encode([
+        'success' => true,
+        'date' => $date,
+        'bankroll' => $moulinette->bankroll,
+        'courses_count' => count($results),
+        'data' => $results
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+} catch (Throwable $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}

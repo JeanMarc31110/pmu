@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎯 Ticket PMU Live</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  header {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+  .clock { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #e6edf3; }
+
+  .capital-row {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .capital-row label { font-size: 0.9rem; color: #8b949e; }
+  .capital-row input {
+    width: 100px;
+    padding: 6px 10px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 1rem;
+  }
+  .capital-row button {
+    padding: 6px 14px;
+    background: #1f6feb;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  /* Ticket principal */
+  .ticket-card {
+    width: 100%;
+    max-width: 700px;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    background: #161b22;
+    border: 2px solid #30363d;
+    transition: all 0.4s ease;
+  }
+  .ticket-card.alerte {
+    background: #1a0e00;
+    border-color: #ff7b00;
+    box-shadow: 0 0 40px rgba(255, 123, 0, 0.35);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .ticket-card.aucune {
+    border-color: #30363d;
+    opacity: 0.7;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(255, 123, 0, 0.3); }
+    50%       { box-shadow: 0 0 55px rgba(255, 123, 0, 0.6); }
+  }
+
+  .ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+  }
+  .ticket-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+    margin-bottom: 4px;
+  }
+  .ticket-course-id {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #58a6ff;
+  }
+  .ticket-libelle {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-top: 2px;
+  }
+  .countdown {
+    text-align: right;
+  }
+  .countdown-val {
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .countdown-val.urgent { color: #ff7b00; }
+  .countdown-val.normal { color: #3fb950; }
+  .countdown-label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
+
+  .ticket-body {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    background: #0d1117;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .num-box {
+    width: 60px;
+    height: 60px;
+    background: #1f6feb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: white;
+  }
+  .cheval-info {}
+  .cheval-nom {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e6edf3;
+    margin-bottom: 4px;
+  }
+  .cheval-meta {
+    font-size: 0.82rem;
+    color: #8b949e;
+    display: flex;
+    gap: 10px;
+  }
+  .badge {
+    background: #21262d;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 0.78rem;
+  }
+  .badge.profil1 { background: #3d1a1a; color: #ff7b7b; border: 1px solid #7b1f1f; }
+  .badge.profil2 { background: #1a2f3d; color: #79c0ff; border: 1px solid #1f4a7b; }
+  .badge.profil3 { background: #1a3d2a; color: #56d364; border: 1px solid #1f7b3d; }
+
+  .mise-box {
+    text-align: center;
+    padding: 12px 16px;
+    background: #21262d;
+    border-radius: 10px;
+    min-width: 80px;
+  }
+  .mise-label { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
+  .mise-val {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #f0c040;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .mise-unit { font-size: 0.85rem; color: #8b949e; }
+
+  .ticket-footer {
+    display: flex;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: #8b949e;
+    flex-wrap: wrap;
+  }
+  .ticket-footer span { display: flex; align-items: center; gap: 4px; }
+
+  /* Prochaines courses */
+  .section-title {
+    width: 100%;
+    max-width: 700px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .courses-list {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .course-row {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.88rem;
+  }
+  .course-row.active { border-color: #ff7b00; background: #1a0e00; }
+  .course-row.done   { opacity: 0.4; }
+  .course-row .cid   { font-weight: 700; color: #58a6ff; }
+  .course-row .cname { color: #e6edf3; }
+  .course-row .cname .sub { font-size: 0.78rem; color: #8b949e; }
+  .course-row .cheure { color: #8b949e; font-variant-numeric: tabular-nums; }
+  .course-row .cmise  { font-weight: 700; color: #f0c040; min-width: 50px; text-align: right; }
+
+  .status-bar {
+    width: 100%;
+    max-width: 700px;
+    text-align: center;
+    font-size: 0.78rem;
+    color: #484f58;
+    margin-top: 20px;
+  }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3fb950; margin-right: 6px; animation: blink 2s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎯 Ticket PMU Live</h1>
+  <div class="clock" id="clock">--:--:--</div>
+</header>
+
+<div class="capital-row">
+  <label>Bankroll :</label>
+  <input type="number" id="capitalInput" value="100" min="10" step="10"> €
+  <button onclick="refresh()">Actualiser</button>
+</div>
+
+<!-- Ticket principal -->
+<div class="ticket-card aucune" id="ticketCard">
+  <div style="text-align:center; padding:30px 0; color:#484f58;">Chargement...</div>
+</div>
+
+<!-- Prochaines courses -->
+<div class="section-title">
+  <span>Toutes les courses du jour</span>
+  <span id="nbCourses" style="font-weight:400; color:#484f58;"></span>
+</div>
+<div class="courses-list" id="coursesList"></div>
+
+<div class="status-bar">
+  <span class="dot"></span>
+  Rafraîchissement auto toutes les 30 secondes — <span id="lastUpdate">--</span>
+</div>
+
+<script>
+const NGROK = 'https://threaten-skinhead-untimely.ngrok-free.dev';
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function fmt_sec(s) {
+  if (s <= 0) return '00:00';
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return pad(m) + ':' + pad(sec);
+}
+
+function profil_badge(p) {
+  if (!p) return '';
+  const cls = ['','profil1','profil2','profil3'][p] || '';
+  const lbl = ['','P1 (5-8)','P2 (3-5)','P3 (2-3)'][p] || '';
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+let countdownInterval = null;
+let currentData = null;
+
+function startCountdown(data) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  if (!data || !data.prochaine) return;
+
+  function tick() {
+    const now = Math.floor(Date.now() / 1000);
+    const depart = Math.floor(data.prochaine.heure_ms / 1000);
+    const restant = depart - now;
+
+    const el = document.getElementById('cdVal');
+    if (!el) return;
+
+    el.textContent = restant > 0 ? fmt_sec(restant) : '▶ PARTI';
+
+    const card = document.getElementById('ticketCard');
+    if (restant > 0 && restant <= 600) {
+      el.className = 'countdown-val urgent';
+      card.className = 'ticket-card alerte';
+    } else {
+      el.className = 'countdown-val normal';
+      card.className = 'ticket-card';
+    }
+
+    // Alerte sonore à 10min pile
+    if (restant === 600) {
+      try { new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAA...').play(); } catch(e){}
+      // Notification navigateur
+      if (Notification.permission === 'granted') {
+        new Notification('🎯 PMU - Course dans 10 minutes !', {
+          body: `R${data.prochaine.reunion}C${data.prochaine.course} — N°${data.prochaine.num_cheval} ${data.prochaine.nom_cheval} — Mise : ${data.prochaine.mise}€`,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎯</text></svg>'
+        });
+      }
+    }
+  }
+
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+function renderTicket(data) {
+  currentData = data;
+  const card = document.getElementById('ticketCard');
+  const p = data.prochaine;
+
+  if (!p) {
+    card.className = 'ticket-card aucune';
+    card.innerHTML = `
+      <div style="text-align:center; padding:30px 0; color:#484f58;">
+        <div style="font-size:2rem; margin-bottom:10px;">✅</div>
+        <div>Aucune course à venir aujourd'hui</div>
+      </div>`;
+    if (countdownInterval) clearInterval(countdownInterval);
+    return;
+  }
+
+  const cote_aff = p.cote_finale ?? p.cote_matin;
+
+  card.innerHTML = `
+    <div class="ticket-header">
+      <div>
+        <div class="ticket-label">Prochaine course</div>
+        <div class="ticket-course-id">R${p.reunion} — Course ${p.course}</div>
+        <div class="ticket-libelle">${p.libelle || ''} · ${p.heure_depart} · ${p.nb_partants ?? '?'} partants</div>
+      </div>
+      <div class="countdown">
+        <div class="countdown-val normal" id="cdVal">--:--</div>
+        <div class="countdown-label">avant départ</div>
+      </div>
+    </div>
+
+    <div class="ticket-body">
+      <div class="num-box">${p.num_cheval}</div>
+      <div class="cheval-info">
+        <div class="cheval-nom">${p.nom_cheval}</div>
+        <div class="cheval-meta">
+          ${profil_badge(p.profil)}
+          ${cote_aff ? `<span class="badge">Cote ${cote_aff}</span>` : ''}
+          <span class="badge">Score ${p.jt_score}</span>
+        </div>
+      </div>
+      <div class="mise-box">
+        <div class="mise-label">Mise</div>
+        <div class="mise-val">${p.mise}</div>
+        <div class="mise-unit">€</div>
+      </div>
+    </div>
+
+    <div class="ticket-footer">
+      <span>📅 ${data.date.slice(0,2)}/${data.date.slice(2,4)}/${data.date.slice(4)}</span>
+      ${p.cote_matin  ? `<span>🌅 Cote matin : ${p.cote_matin}</span>` : ''}
+      ${p.cote_finale ? `<span>🏁 Cote finale : ${p.cote_finale}</span>` : ''}
+      <span>💼 Bankroll : ${data.capital}€</span>
+    </div>
+  `;
+
+  startCountdown(data);
+}
+
+function renderList(data) {
+  const list = document.getElementById('coursesList');
+  const nb   = document.getElementById('nbCourses');
+  nb.textContent = data.nb_courses + ' courses';
+
+  if (!data.toutes_courses || !data.toutes_courses.length) {
+    list.innerHTML = '<div style="color:#484f58; text-align:center; padding:20px;">Aucune course qualifiée</div>';
+    return;
+  }
+
+  list.innerHTML = data.toutes_courses.map(c => {
+    const isNext = data.prochaine && c.reunion == data.prochaine.reunion && c.course == data.prochaine.course;
+    const isDone = c.ordre_arrive !== null;
+    const cls = isDone ? 'done' : (isNext ? 'active' : '');
+    const resultat = isDone
+      ? (c.ordre_arrive === 1 ? ' ✅' : ' ❌')
+      : '';
+    return `
+      <div class="course-row ${cls}">
+        <span class="cid">R${c.reunion}C${c.course}</span>
+        <span class="cname">
+          N°${c.num_cheval} <strong>${c.nom_cheval}</strong>${resultat}
+          <div class="sub">${c.libelle || ''}</div>
+        </span>
+        <span class="cheure">${c.heure_depart}</span>
+        <span class="cmise">${c.mise}€</span>
+      </div>`;
+  }).join('');
+}
+
+let refreshCount = 0;
+
+function refresh() {
+  refreshCount++;
+  const capital = document.getElementById('capitalInput').value || 100;
+  const url = `${NGROK}/pmu/ticket_prochain.php?capital=${capital}&v=${refreshCount}`;
+
+  fetch(url, { headers: { 'ngrok-skip-browser-warning': '1' } })
+    .then(r => r.json())
+    .then(data => {
+      renderTicket(data);
+      renderList(data);
+      document.getElementById('lastUpdate').textContent = 'Mis à jour à ' + data.heure_actuelle;
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('lastUpdate').textContent = 'Erreur de connexion';
+    });
+}
+
+// Horloge en temps réel
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Demander permission notifications
+if (Notification && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// Premier chargement + auto-refresh toutes les 30s
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>

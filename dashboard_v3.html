@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMU — Salle des Opérations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c0f;
+  --bg2: #111318;
+  --bg3: #181c23;
+  --border: #1e2330;
+  --border2: #252c3a;
+  --green: #00e5a0;
+  --green2: #00b87a;
+  --red: #ff4d6a;
+  --amber: #ffb547;
+  --blue: #4d9fff;
+  --text: #e8eaf0;
+  --text2: #8892aa;
+  --text3: #4a5568;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; overflow-x:hidden; }
+
+/* Grain overlay */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:.4;
+}
+
+/* HEADER */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 28px; border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg, #0d1017 0%, transparent 100%);
+  position:sticky; top:0; z-index:100; backdrop-filter:blur(12px);
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.logo-mark { width:32px; height:32px; background:var(--green); border-radius:6px;
+  display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:#000; }
+.logo-text { font-size:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text2); }
+.header-right { display:flex; align-items:center; gap:10px; }
+
+/* DATE NAV */
+.date-nav { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:13px; }
+.date-nav button { background:var(--bg3); border:1px solid var(--border2); color:var(--text2);
+  padding:5px 10px; border-radius:5px; cursor:pointer; font-family:var(--mono); font-size:11px;
+  transition:all .15s; white-space:nowrap; }
+.date-nav button:hover { border-color:var(--green); color:var(--green); }
+.date-nav button.active { background:var(--green); color:#000; border-color:var(--green); font-weight:600; }
+#date-display { font-weight:600; color:var(--text); min-width:110px; text-align:center; }
+.date-arrows { display:flex; gap:4px; }
+.date-arrows button { padding:5px 8px; font-size:13px; }
+
+/* ALERT BUTTON */
+.alert-btn {
+  display:flex; align-items:center; gap:8px; padding:7px 16px;
+  border-radius:8px; border:none; cursor:pointer; font-family:var(--sans);
+  font-size:13px; font-weight:600; transition:all .2s; white-space:nowrap;
+}
+.alert-btn.active { background:var(--green); color:#000; box-shadow:0 0 20px rgba(0,229,160,.3); }
+.alert-btn.inactive { background:var(--bg3); border:1px solid var(--border2); color:var(--text2); }
+.alert-btn .dot { width:8px; height:8px; border-radius:50%; }
+.alert-btn.active .dot { background:#000; animation:pulse-dot 1.5s infinite; }
+.alert-btn.inactive .dot { background:var(--text3); }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* LAYOUT */
+.layout { display:grid; grid-template-columns:260px 1fr 280px; gap:0; height:calc(100vh - 57px); }
+
+/* LEFT PANEL */
+.left-panel { border-right:1px solid var(--border); overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:12px; }
+
+/* SECTION LABELS */
+.section-label { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text3); padding:0 4px 6px; }
+
+/* PIPELINE BUTTONS */
+.pipeline-section { display:flex; flex-direction:column; gap:6px; }
+.btn-pipeline { display:flex; align-items:center; gap:10px; padding:10px 14px;
+  border-radius:8px; border:1px solid var(--border2); background:var(--bg3);
+  color:var(--text); cursor:pointer; font-family:var(--sans); font-size:13px;
+  font-weight:600; transition:all .15s; text-align:left; width:100%; }
+.btn-pipeline:hover:not(:disabled) { border-color:var(--green); color:var(--green); background:#0d1a14; }
+.btn-pipeline:disabled { opacity:.4; cursor:not-allowed; }
+.btn-pipeline .btn-icon { font-size:16px; flex-shrink:0; }
+.btn-pipeline.primary { background:linear-gradient(135deg, #0d2a1a 0%, #0a1f13 100%);
+  border-color:var(--green2); color:var(--green); }
+.btn-pipeline.primary:hover:not(:disabled) { box-shadow:0 0 16px rgba(0,229,160,.15); }
+.btn-pipeline.danger { border-color:#2a1a1a; color:var(--red); }
+
+/* BANKROLL INPUT */
+.bankroll-box { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px; }
+.bankroll-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
+.bankroll-input { background:transparent; border:none; color:var(--green); font-family:var(--mono);
+  font-size:20px; font-weight:500; width:100%; outline:none; }
+
+/* PLAGE SECTION */
+.plage-box { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px; }
+.plage-toggle { display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+.toggle-switch { width:36px; height:20px; background:var(--border2); border-radius:10px; position:relative; transition:background .2s; }
+.toggle-switch.on { background:var(--green); }
+.toggle-switch::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px;
+  background:#fff; border-radius:50%; transition:transform .2s; }
+.toggle-switch.on::after { transform:translateX(16px); }
+.plage-dates { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+.plage-dates input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text);
+  padding:6px 10px; border-radius:6px; font-family:var(--mono); font-size:12px; width:100%;
+  outline:none; }
+.plage-dates input[type=date]:focus { border-color:var(--green); }
+.plage-info { font-family:var(--mono); font-size:11px; color:var(--text3); margin-top:4px; }
+
+/* STATUS BOX */
+.status-box { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:10px 12px;
+  font-family:var(--mono); font-size:11px; color:var(--text2); min-height:40px; }
+.status-box.error { border-color:var(--red); color:var(--red); }
+
+/* MAIN AREA */
+.main-area { overflow-y:auto; padding:20px 24px; }
+
+/* KPI GRID */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+.kpi { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+.kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
+.kpi-value { font-family:var(--mono); font-size:22px; font-weight:500; color:var(--text); }
+.kpi-value.green { color:var(--green); }
+.kpi-value.red { color:var(--red); }
+.kpi-value.amber { color:var(--amber); }
+
+/* PIPELINE STATUS BADGE */
+.pipeline-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
+  border-radius:20px; font-size:11px; font-weight:600; font-family:var(--mono); margin-bottom:16px; }
+.pipeline-badge.running { background:rgba(255,181,71,.15); color:var(--amber); border:1px solid rgba(255,181,71,.3); }
+.pipeline-badge.success { background:rgba(0,229,160,.12); color:var(--green); border:1px solid rgba(0,229,160,.25); }
+.pipeline-badge.idle { background:var(--bg3); color:var(--text3); border:1px solid var(--border); }
+.badge-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+.pipeline-badge.running .badge-dot { animation:pulse-dot 1s infinite; }
+
+/* SECTIONS */
+.section { background:var(--bg2); border:1px solid var(--border); border-radius:12px; margin-bottom:16px; overflow:hidden; }
+.section-head { display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--border); }
+.section-title { font-size:14px; font-weight:700; }
+.section-sub { font-size:11px; color:var(--text3); margin-top:1px; }
+.section-badge { font-family:var(--mono); font-size:11px; font-weight:500; padding:3px 9px;
+  border-radius:20px; background:var(--bg3); color:var(--text2); border:1px solid var(--border2); }
+.section-badge.green { background:rgba(0,229,160,.1); color:var(--green); border-color:rgba(0,229,160,.2); }
+.section-badge.red { background:rgba(255,77,106,.1); color:var(--red); border-color:rgba(255,77,106,.2); }
+.section-badge.amber { background:rgba(255,181,71,.1); color:var(--amber); border-color:rgba(255,181,71,.2); }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+thead th { padding:9px 14px; text-align:left; font-size:10px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; }
+tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--bg3); }
+tbody td { padding:10px 14px; font-family:var(--mono); font-size:12px; color:var(--text2); white-space:nowrap; }
+tbody td.course-name { font-family:var(--sans); font-size:12px; font-weight:600; color:var(--text); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+tbody td.sel-name { font-family:var(--sans); font-size:12px; font-weight:600; color:var(--text); }
+.pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+  border-radius:20px; font-size:10px; font-weight:700; font-family:var(--sans); }
+.pill.won { background:rgba(0,229,160,.12); color:var(--green); }
+.pill.lost { background:rgba(255,77,106,.1); color:var(--red); }
+.pill.pending { background:rgba(255,181,71,.1); color:var(--amber); }
+.pill.abs { background:var(--bg3); color:var(--text3); }
+.result-pos { color:var(--green); font-weight:600; }
+.result-neg { color:var(--red); font-weight:600; }
+.result-zero { color:var(--text3); }
+.num-badge { display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:4px; background:rgba(77,159,255,.15);
+  color:var(--blue); font-size:11px; font-weight:700; }
+
+/* FILTER CHIPS */
+.chip-row { display:flex; gap:6px; padding:10px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.chip { padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600;
+  cursor:pointer; border:1px solid var(--border2); background:transparent; color:var(--text3);
+  font-family:var(--sans); transition:all .15s; }
+.chip.active { background:var(--green); color:#000; border-color:var(--green); }
+.chip:hover:not(.active) { border-color:var(--text2); color:var(--text2); }
+
+/* IMMINENT CARD */
+.imminent-card { padding:14px 18px; }
+.imminent-race { background:linear-gradient(135deg, #0d2a1a 0%, #0a1f13 100%);
+  border:1px solid rgba(0,229,160,.2); border-radius:10px; padding:14px; margin-bottom:10px; }
+.imminent-race:last-child { margin-bottom:0; }
+.imminent-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px; }
+.imminent-rc { font-family:var(--mono); font-size:11px; color:var(--green); font-weight:500; }
+.imminent-libelle { font-size:13px; font-weight:700; margin:2px 0; }
+.imminent-time { font-family:var(--mono); font-size:11px; color:var(--amber); font-weight:600; }
+.imminent-sel { font-family:var(--mono); font-size:12px; color:var(--text); margin-top:6px; }
+.imminent-cote { color:var(--text2); font-size:11px; }
+.imminent-actions { display:flex; gap:8px; margin-top:10px; }
+.btn-sm { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600;
+  cursor:pointer; font-family:var(--sans); border:none; transition:all .15s; }
+.btn-sm.green { background:var(--green); color:#000; }
+.btn-sm.ghost { background:var(--bg3); color:var(--text2); border:1px solid var(--border2); }
+.btn-sm.ghost:hover { border-color:var(--green); color:var(--green); }
+.empty-state { padding:32px; text-align:center; color:var(--text3); font-size:13px; }
+
+/* RIGHT PANEL */
+.right-panel { border-left:1px solid var(--border); overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:12px; }
+
+/* STATE CARDS */
+.state-card { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; }
+.state-title { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--text3); margin-bottom:6px; }
+.state-value { font-family:var(--mono); font-size:13px; font-weight:500; }
+.state-value.green { color:var(--green); }
+.state-value.red { color:var(--red); }
+.state-value.amber { color:var(--amber); }
+.state-row { display:flex; align-items:center; justify-content:space-between; padding:4px 0;
+  border-bottom:1px solid var(--border); font-size:12px; }
+.state-row:last-child { border-bottom:none; }
+.state-key { color:var(--text2); }
+.state-val { font-family:var(--mono); font-weight:500; }
+
+/* WATCHER */
+.watcher-card { background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; }
+.watcher-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.watcher-title { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); }
+.watcher-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse-dot 1.5s infinite; }
+.watcher-dot.stale { background:var(--red); animation:none; }
+.watcher-detail { font-family:var(--mono); font-size:11px; color:var(--text2); line-height:1.6; }
+.last-ticket { margin-top:6px; padding:6px 8px; background:rgba(0,229,160,.06); border-radius:6px;
+  border:1px solid rgba(0,229,160,.12); font-family:var(--mono); font-size:11px; color:var(--green); }
+
+/* JOURNAL */
+.journal { background:#050709; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.journal-head { padding:8px 12px; border-bottom:1px solid var(--border); font-size:10px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text3); }
+.journal-body { padding:8px 12px; max-height:200px; overflow-y:auto; font-family:var(--mono); font-size:11px; line-height:1.7; }
+.journal-entry { color:var(--text3); }
+.journal-entry .ts { color:var(--text3); opacity:.5; }
+.journal-entry .msg { }
+.journal-entry.info .msg { color:var(--text2); }
+.journal-entry.success .msg { color:var(--green); }
+.journal-entry.warn .msg { color:var(--amber); }
+.journal-entry.error .msg { color:var(--red); }
+
+/* PROGRESS BAR */
+.progress-bar { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width .3s; }
+
+/* PLAGE PROGRESS */
+.plage-progress { padding:14px 18px; display:flex; flex-direction:column; gap:8px; }
+.plage-day { display:grid; grid-template-columns:60px 1fr 70px; align-items:center; gap:10px; font-size:12px; }
+.plage-day-label { font-family:var(--mono); color:var(--text2); }
+.plage-day-status { font-family:var(--mono); font-size:11px; text-align:right; }
+.plage-day-status.done { color:var(--green); }
+.plage-day-status.running { color:var(--amber); }
+.plage-day-status.waiting { color:var(--text3); }
+
+/* LOADER */
+.loader { display:inline-block; width:12px; height:12px; border:2px solid var(--border2);
+  border-top-color:var(--green); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:6px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+/* RESPONSIVE adjustments */
+@media(max-width:1200px) {
+  .layout { grid-template-columns:220px 1fr 240px; }
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P</div>
+    <div>
+      <div class="logo-text">PMU — Salle des Opérations</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="date-nav">
+      <div class="date-arrows">
+        <button onclick="shiftDate(-1)" title="Jour précédent">◀</button>
+        <button onclick="shiftDate(1)" title="Jour suivant">▶</button>
+      </div>
+      <span id="date-display">—</span>
+      <button onclick="setToday()" class="active" id="btn-today">Aujourd'hui</button>
+      <button onclick="setRelDate(-1)" id="btn-hier">Hier</button>
+      <button onclick="setRelDate(-2)" id="btn-avhier">Avant-hier</button>
+      <button onclick="setRelDate(-7)" id="btn-7j">-7j</button>
+      <input type="date" id="date-picker" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:5px;font-family:var(--mono);font-size:11px;outline:none;" onchange="setDateFromPicker(this.value)">
+    </div>
+    <button class="alert-btn inactive" id="alert-btn" onclick="toggleAlerts()">
+      <div class="dot"></div>
+      <span id="alert-label">Alertes désactivées</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="section-label">Pipeline</div>
+    <div class="pipeline-section">
+      <button class="btn-pipeline primary" id="btn-flux" onclick="runFluxComplet()">
+        <span class="btn-icon">⚡</span> Flux complet
+      </button>
+      <button class="btn-pipeline" id="btn-prepare" onclick="runPrepare()">
+        <span class="btn-icon">📥</span> 1. Préparer données
+      </button>
+      <button class="btn-pipeline" id="btn-analyse" onclick="runAnalyse()">
+        <span class="btn-icon">🔍</span> 2. Lancer l'analyse
+      </button>
+      <button class="btn-pipeline" id="btn-gains" onclick="runGains()">
+        <span class="btn-icon">💰</span> 3. Calculer gains
+      </button>
+    </div>
+
+    <div class="bankroll-box">
+      <div class="bankroll-label">Bankroll du jour (€)</div>
+      <input class="bankroll-input" type="number" id="bankroll" value="10" min="1" max="10000" onchange="saveBankroll(this.value)">
+    </div>
+
+    <div class="section-label" style="margin-top:4px;">Plage de dates</div>
+    <div class="plage-box">
+      <div class="plage-toggle" onclick="togglePlageMode()">
+        <span style="font-size:13px;font-weight:600;">Mode plage</span>
+        <div class="toggle-switch" id="plage-toggle"></div>
+      </div>
+      <div class="plage-dates" id="plage-dates" style="display:none;">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:2px;">Du</div>
+        <input type="date" id="plage-from" onchange="updatePlagInfo()">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:2px;margin-top:4px;">Au</div>
+        <input type="date" id="plage-to" onchange="updatePlagInfo()">
+        <div class="plage-info" id="plage-info">Sélectionnez une plage</div>
+        <button class="btn-pipeline primary" style="margin-top:8px;" id="btn-plage" onclick="runPlage()">
+          <span class="btn-icon">📅</span> Lancer la plage
+        </button>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:4px;">Analyse individuelle</div>
+    <div style="display:flex;gap:6px;">
+      <input type="text" id="course-input" value="R1C1" placeholder="R1C1"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:6px;font-family:var(--mono);font-size:12px;outline:none;">
+      <button class="btn-pipeline" style="padding:7px 12px;flex-shrink:0;" onclick="analyserCourse()">Analyser</button>
+    </div>
+
+    <div class="status-box" id="status-box">Prêt.</div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area" id="main-area">
+    <div id="pipeline-badge-area"></div>
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Courses</div><div class="kpi-value" id="kpi-courses">—</div></div>
+      <div class="kpi"><div class="kpi-label">Sélections</div><div class="kpi-value" id="kpi-sel">—</div></div>
+      <div class="kpi"><div class="kpi-label">Jouées</div><div class="kpi-value" id="kpi-jouees">—</div></div>
+      <div class="kpi"><div class="kpi-label">À venir</div><div class="kpi-value" id="kpi-avenir">—</div></div>
+      <div class="kpi"><div class="kpi-label">Abstentions</div><div class="kpi-value" id="kpi-abs">—</div></div>
+      <div class="kpi"><div class="kpi-label">Mise totale</div><div class="kpi-value" id="kpi-mise">—</div></div>
+      <div class="kpi"><div class="kpi-label">Net du jour</div><div class="kpi-value" id="kpi-net">—</div></div>
+      <div class="kpi"><div class="kpi-label">Bankroll fin</div><div class="kpi-value" id="kpi-bk">—</div></div>
+    </div>
+
+    <!-- IMMINENTES -->
+    <div class="section" id="section-imminentes">
+      <div class="section-head">
+        <div>
+          <div class="section-title">⏱ Départs imminents</div>
+          <div class="section-sub">Courses sélectionnées dans les 10 prochaines minutes</div>
+        </div>
+        <span class="section-badge amber" id="badge-immin">En attente</span>
+      </div>
+      <div class="imminent-card" id="immin-content">
+        <div class="empty-state">Lance l'analyse pour voir les courses imminentes.</div>
+      </div>
+    </div>
+
+    <!-- SÉLECTIONS DU JOUR -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">📋 Sélections du jour</div>
+          <div class="section-sub">Toutes les courses sélectionnées avec mises, résultats et gains</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="section-badge green" id="badge-sel">—</span>
+        </div>
+      </div>
+      <div class="chip-row">
+        <button class="chip active" onclick="filterSel('all', this)">Toutes</button>
+        <button class="chip" onclick="filterSel('upcoming', this)">À venir</button>
+        <button class="chip" onclick="filterSel('played', this)">Jouées</button>
+        <button class="chip" onclick="filterSel('won', this)">Gagnées</button>
+        <button class="chip" onclick="filterSel('lost', this)">Perdues</button>
+        <button class="chip" onclick="filterSel('abs', this)">Abstentions</button>
+      </div>
+      <div class="table-wrap">
+        <table id="sel-table">
+          <thead>
+            <tr>
+              <th>Heure</th>
+              <th>Course</th>
+              <th>Libellé</th>
+              <th>Sélection</th>
+              <th>Cote</th>
+              <th>Score JT</th>
+              <th>Mise</th>
+              <th>Résultat</th>
+              <th>Net</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="sel-tbody">
+            <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);">Lance l'analyse pour charger les sélections.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- COURSES DU JOUR -->
+    <div class="section" id="section-courses-full">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🗂 Courses du jour</div>
+          <div class="section-sub">Vue complète du programme chargé, indépendante des seules sélections</div>
+        </div>
+        <span class="section-badge" id="badge-full">—</span>
+      </div>
+      <div class="table-wrap">
+        <table id="full-table">
+          <thead>
+            <tr>
+              <th>Heure</th>
+              <th>Course</th>
+              <th>Hippodrome</th>
+              <th>Libellé</th>
+              <th>Discipline</th>
+              <th>Distance</th>
+              <th>Partants</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="full-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3);">Chargement du programme…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PLAGE PROGRESS -->
+    <div class="section" id="section-plage" style="display:none;">
+      <div class="section-head">
+        <div>
+          <div class="section-title">📅 Traitement plage</div>
+        </div>
+        <span class="section-badge" id="badge-plage">En cours</span>
+      </div>
+      <div class="plage-progress" id="plage-progress-content"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <div class="section-label">État système</div>
+
+    <div class="state-card">
+      <div class="state-title">Programme du jour</div>
+      <div class="state-row"><span class="state-key">Date</span><span class="state-val" id="st-date">—</span></div>
+      <div class="state-row"><span class="state-key">Courses</span><span class="state-val" id="st-courses">—</span></div>
+      <div class="state-row"><span class="state-key">Statut</span><span class="state-val" id="st-prog">—</span></div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-title">Analyse moulinette</div>
+      <div class="state-row"><span class="state-key">Sélections</span><span class="state-val" id="st-sel">—</span></div>
+      <div class="state-row"><span class="state-key">Abstentions</span><span class="state-val" id="st-abs">—</span></div>
+      <div class="state-row"><span class="state-key">Statut</span><span class="state-val" id="st-ana">—</span></div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-title">Bilan financier</div>
+      <div class="state-row"><span class="state-key">Résultat net</span><span class="state-val" id="st-net">—</span></div>
+      <div class="state-row"><span class="state-key">Bankroll fin</span><span class="state-val" id="st-bkfin">—</span></div>
+      <div class="state-row"><span class="state-key">Paris</span><span class="state-val" id="st-paris">—</span></div>
+      <div class="state-row"><span class="state-key">Gagnants</span><span class="state-val" id="st-gagnants">—</span></div>
+      <div class="state-row"><span class="state-key">Statut</span><span class="state-val" id="st-bilan">—</span></div>
+    </div>
+
+    <div class="watcher-card">
+      <div class="watcher-head">
+        <div class="watcher-title">Watcher D-10</div>
+        <div class="watcher-dot" id="watcher-dot"></div>
+      </div>
+      <div class="watcher-detail" id="watcher-detail">Chargement...</div>
+      <div class="last-ticket" id="last-ticket" style="display:none;"></div>
+    </div>
+
+    <div class="section-label" style="margin-top:4px;">Journal</div>
+    <div class="journal">
+      <div class="journal-head">Étapes pipeline</div>
+      <div class="journal-body" id="journal-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let currentDate = todayStr();
+let alertsActive = false;
+let pipelineLocked = false;
+let plageMode = false;
+let currentFilter = 'all';
+let allSelections = [];
+let currentPnlData = null;
+let analysisLoaded = false;
+let bilanLoaded = false;
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear().toString() +
+    (d.getMonth()+1).toString().padStart(2,'0') +
+    d.getDate().toString().padStart(2,'0');
+}
+function dateToDisplay(s) {
+  // s = DDMMYYYY or YYYYMMDD
+  if (s.length === 8) {
+    if (parseInt(s.slice(0,4)) > 1900 && s.slice(0,4).startsWith('20')) {
+      // YYYYMMDD
+      return s.slice(6)+'/'+s.slice(4,6)+'/'+s.slice(0,4);
+    }
+    return s.slice(0,2)+'/'+s.slice(2,4)+'/'+s.slice(4);
+  }
+  return s;
+}
+function dateToISO(s) {
+  if (s.length === 8) {
+    if (s.slice(0,4).startsWith('20')) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6);
+    return s.slice(4)+'-'+s.slice(2,4)+'-'+s.slice(0,2);
+  }
+  return s;
+}
+function isoToApi(iso) { return iso.replace(/-/g,''); }
+function apiToDisplay(s) {
+  if (s.length === 8 && s.slice(0,4).startsWith('20')) return s.slice(6)+'/'+s.slice(4,6)+'/'+s.slice(0,4);
+  return s.slice(0,2)+'/'+s.slice(2,4)+'/'+s.slice(4);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DATE NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function setDate(dateApiStr) {
+  currentDate = dateApiStr;
+  updateDateDisplay();
+  resetAnalysisState();
+  autoLoad();
+}
+function setToday() { setDate(todayStr()); }
+function setRelDate(offset) {
+  const d = new Date(); d.setDate(d.getDate()+offset);
+  const s = d.getFullYear().toString()+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0');
+  setDate(s);
+}
+function shiftDate(n) {
+  const iso = dateToISO(currentDate);
+  const d = new Date(iso); d.setDate(d.getDate()+n);
+  const s = d.getFullYear().toString()+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0');
+  setDate(s);
+}
+function setDateFromPicker(val) {
+  if (val) setDate(isoToApi(val));
+}
+function updateDateDisplay() {
+  document.getElementById('date-display').textContent = apiToDisplay(currentDate);
+  const iso = dateToISO(currentDate);
+  document.getElementById('date-picker').value = iso;
+  const today = todayStr();
+  document.getElementById('btn-today').classList.toggle('active', currentDate === today);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════════════════════════════
+function toggleAlerts() {
+  if (alertsActive) {
+    disableAlerts();
+  } else {
+    enableAlerts();
+  }
+}
+async function enableAlerts() {
+  if (!('Notification' in window)) {
+    setStatus('Notifications non supportées sur cet appareil.', true);
+    return;
+  }
+  let perm = Notification.permission;
+  if (perm === 'denied') {
+    setStatus('Notifications bloquées. Activez-les dans les paramètres du navigateur.', true);
+    return;
+  }
+  if (perm !== 'granted') {
+    perm = await Notification.requestPermission();
+  }
+  if (perm === 'granted') {
+    alertsActive = true;
+    updateAlertBtn();
+    log('Alertes téléphone activées — notifications navigateur actives.', 'success');
+    setStatus('✓ Alertes activées.');
+    // Démarrer le polling des tickets imminents
+    startTicketPolling();
+  } else {
+    setStatus('Permission refusée pour les notifications.', true);
+  }
+}
+function disableAlerts() {
+  alertsActive = false;
+  updateAlertBtn();
+  stopTicketPolling();
+  log('Alertes désactivées.', 'warn');
+  setStatus('Alertes désactivées.');
+}
+function updateAlertBtn() {
+  const btn = document.getElementById('alert-btn');
+  const label = document.getElementById('alert-label');
+  if (alertsActive) {
+    btn.className = 'alert-btn active';
+    label.textContent = 'Alertes actives';
+  } else {
+    btn.className = 'alert-btn inactive';
+    label.textContent = 'Alertes désactivées';
+  }
+}
+let ticketPollingTimer = null;
+let lastTicketId = null;
+function startTicketPolling() {
+  stopTicketPolling();
+  pollTicket();
+  ticketPollingTimer = setInterval(pollTicket, 30000);
+}
+function stopTicketPolling() {
+  if (ticketPollingTimer) { clearInterval(ticketPollingTimer); ticketPollingTimer = null; }
+}
+async function pollTicket() {
+  try {
+    const resp = await fetch('/pmu/ticket_prochain.php?date='+currentDate+'&_ts='+Date.now());
+    const data = await resp.json();
+    if (data.prochaine) {
+      const ticketId = data.date + '_' + data.prochaine.reunion + '_' + data.prochaine.course;
+      if (ticketId !== lastTicketId) {
+        lastTicketId = ticketId;
+        const rc = data.prochaine.reunion+data.prochaine.course;
+        const sel = data.prochaine.selection;
+        if (alertsActive && sel) {
+          const n = new Notification('🏇 PMU — Départ imminent', {
+            body: rc+' · '+data.prochaine.libelle+'\n→ '+sel.num+' - '+sel.nom+(sel.cote?' · Cote '+sel.cote:''),
+            icon: '/pmu/favicon.ico',
+            tag: ticketId
+          });
+          setTimeout(()=>n.close(), 8000);
+        }
+      }
+    }
+    renderImminentes(data);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PIPELINE — FETCH HELPERS
+// ═══════════════════════════════════════════════════════════════
+const PIPELINE_STEPS = [
+  {label:'1/5 Import des courses', url:'fetch_to_sqlite.php'},
+  {label:'2/5 Réparation drivers', url:'repair_driver_jockey.php'},
+  {label:'3/5 Construction JT', url:'build_jt_reference_from_base.php'},
+  {label:'4/5 Injection cotes', url:'inject_market_odds_day_from_raw.php'},
+  {label:'5/5 Rebuild moulinette', url:'build_moulinette_inputs.php'},
+];
+
+function lockBtns(v) {
+  pipelineLocked = v;
+  ['btn-flux','btn-prepare','btn-analyse','btn-gains','btn-plage'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = v;
+  });
+}
+function setBadge(state, text) {
+  const area = document.getElementById('pipeline-badge-area');
+  if (state === 'idle') { area.innerHTML=''; return; }
+  const cls = state==='running'?'running':state==='success'?'success':'idle';
+  area.innerHTML = `<div class="pipeline-badge ${cls}"><div class="badge-dot"></div>${text}</div>`;
+}
+
+async function runStep(step, dateStr) {
+  log(step.label+'...', 'info');
+  setStatus('<span class="loader"></span>'+step.label+'...');
+  const resp = await fetch('/pmu/'+step.url+'?date='+dateStr+'&_ts='+Date.now());
+  const data = await resp.json().catch(()=>({success:false,error:'parse error'}));
+  if (!data.success && data.error) throw new Error(step.label+' : '+data.error);
+  return data;
+}
+
+async function runPipeline(dateStr) {
+  setBadge('running', 'Pipeline en cours...');
+  let pipelineResult = null;
+  for (const step of PIPELINE_STEPS) {
+    try {
+      const res = await runStep(step, dateStr);
+      pipelineResult = res;
+    } catch(e) {
+      log('Erreur: '+e.message, 'error');
+      setStatus('Erreur pipeline: '+e.message, true);
+      setBadge('idle','');
+      return null;
+    }
+  }
+  log('Pipeline terminé ✓', 'success');
+  setBadge('success', 'Pipeline terminé — Succès');
+  // Afficher stats pipeline
+  if (pipelineResult) {
+    const d = pipelineResult;
+    const stats = [
+      d.drivers_repaired !== undefined ? `Drivers: ${d.drivers_repaired}` : '',
+      d.jt_pairs !== undefined ? `JT: ${d.jt_pairs}` : '',
+      d.cotes !== undefined ? `Cotes: ${d.cotes}` : '',
+      d.inputs !== undefined ? `Inputs: ${d.inputs}` : '',
+    ].filter(Boolean).join(' · ');
+    if (stats) log(stats, 'info');
+  }
+  // Update KPI courses
+  document.getElementById('kpi-courses').textContent = pipelineResult?.courses_count || '—';
+  document.getElementById('st-date').textContent = apiToDisplay(dateStr);
+  document.getElementById('st-prog').innerHTML = '<span style="color:var(--green)">Chargé</span>';
+  document.getElementById('st-courses').textContent = pipelineResult?.courses_count || '—';
+  await loadFullDay();
+  return pipelineResult;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════════════
+async function runPrepare() {
+  if (pipelineLocked) return;
+  lockBtns(true);
+  try {
+    await runPipeline(currentDate);
+    setStatus('Préparation terminée.');
+  } finally { lockBtns(false); }
+}
+
+async function runAnalyse() {
+  if (pipelineLocked) return;
+  lockBtns(true);
+  setBadge('running','Analyse en cours...');
+  setStatus('<span class="loader"></span>Analyse moulinette...');
+  log('Analyse de la journée en cours...', 'info');
+  try {
+    // Charger les données d'analyse
+    const [pnlResp, summResp] = await Promise.all([
+      fetch('/pmu/query_day_moulinette_pnl.php?date='+currentDate+'&_ts='+Date.now()),
+      fetch('/pmu/query_day_moulinette_summary.php?date='+currentDate+'&_ts='+Date.now())
+    ]);
+    const pnl = await pnlResp.json();
+    const summ = await summResp.json().catch(()=>null);
+    
+    currentPnlData = pnl;
+    analysisLoaded = true;
+    renderSelections(pnl);
+    renderKpis(pnl);
+    setBadge('success','Analyse terminée');
+    log(`Analyse chargée : ${pnl.details?.filter(d=>d.mise>0).length||0} sélection(s)`, 'success');
+    setStatus('Analyse terminée.');
+  } catch(e) {
+    log('Erreur analyse: '+e.message, 'error');
+    setStatus('Erreur analyse: '+e.message, true);
+    setBadge('idle','');
+  } finally { lockBtns(false); }
+}
+
+async function runGains() {
+  if (!analysisLoaded) {
+    setStatus('Lancez d\'abord l\'analyse.', true);
+    return;
+  }
+  // Les gains sont déjà dans les données PNL, on recharge juste
+  await runAnalyse();
+}
+
+async function runFluxComplet() {
+  if (pipelineLocked) return;
+  lockBtns(true);
+  try {
+    const pipeRes = await runPipeline(currentDate);
+    if (!pipeRes) { lockBtns(false); return; }
+    // Analyse automatique
+    setBadge('running','Analyse en cours...');
+    setStatus('<span class="loader"></span>Analyse moulinette...');
+    const pnlResp = await fetch('/pmu/query_day_moulinette_pnl.php?date='+currentDate+'&_ts='+Date.now());
+    const pnl = await pnlResp.json();
+    currentPnlData = pnl;
+    analysisLoaded = true;
+    bilanLoaded = true;
+    renderSelections(pnl);
+    renderKpis(pnl);
+    renderBilan(pnl);
+    setBadge('success','Flux complet terminé');
+    log('Flux complet terminé ✓ — NET: '+(pnl.resultat_net_total>0?'+':'')+pnl.resultat_net_total+'€', 'success');
+    setStatus('Flux complet terminé.');
+    // Démarrer polling tickets si alertes actives
+    if (alertsActive) startTicketPolling();
+  } catch(e) {
+    log('Erreur flux: '+e.message, 'error');
+    setStatus('Erreur flux: '+e.message, true);
+    setBadge('idle','');
+  } finally { lockBtns(false); }
+}
+
+async function analyserCourse() {
+  const rc = document.getElementById('course-input').value.trim().toUpperCase();
+  if (!rc.match(/^R\d+C\d+$/)) { setStatus('Format invalide. Ex: R1C1', true); return; }
+  setStatus('<span class="loader"></span>Analyse '+rc+'...');
+  log('Analyse individuelle: '+rc, 'info');
+  // Juste recharger les données filtrées sur cette course
+  if (currentPnlData) {
+    const [r, c] = rc.replace('R','').split('C');
+    const item = currentPnlData.details?.find(d => d.reunion==='R'+r && d.course==='C'+c);
+    if (item) {
+      log(rc+' : '+(item.statut||'—')+' · Sel: '+(item.selection?.nom||'—')+' · Net: '+(item.resultat_net||0)+'€', 'info');
+      setStatus(rc+' analysé.');
+    } else {
+      log(rc+' : non trouvé dans l\'analyse courante.', 'warn');
+      setStatus(rc+' non trouvé.', true);
+    }
+  } else {
+    setStatus('Lance l\'analyse d\'abord.', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAGE
+// ═══════════════════════════════════════════════════════════════
+function togglePlageMode() {
+  plageMode = !plageMode;
+  document.getElementById('plage-toggle').classList.toggle('on', plageMode);
+  document.getElementById('plage-dates').style.display = plageMode ? 'flex' : 'none';
+}
+function updatePlagInfo() {
+  const from = document.getElementById('plage-from').value;
+  const to = document.getElementById('plage-to').value;
+  if (from && to) {
+    const d1 = new Date(from), d2 = new Date(to);
+    const diff = Math.round((d2-d1)/(1000*60*60*24))+1;
+    if (diff > 0 && diff <= 30) {
+      document.getElementById('plage-info').textContent = diff+' jour(s) — Pipeline complet sur chaque jour.';
+      document.getElementById('plage-info').style.color = 'var(--green)';
+    } else if (diff > 30) {
+      document.getElementById('plage-info').textContent = 'Maximum 30 jours.';
+      document.getElementById('plage-info').style.color = 'var(--red)';
+    } else {
+      document.getElementById('plage-info').textContent = 'Date invalide.';
+      document.getElementById('plage-info').style.color = 'var(--red)';
+    }
+  }
+}
+async function runPlage() {
+  const from = document.getElementById('plage-from').value;
+  const to = document.getElementById('plage-to').value;
+  if (!from || !to) { setStatus('Renseignez les deux dates.', true); return; }
+  const d1 = new Date(from), d2 = new Date(to);
+  const diff = Math.round((d2-d1)/(1000*60*60*24))+1;
+  if (diff <= 0 || diff > 30) { setStatus('Plage invalide (1-30 jours).', true); return; }
+  
+  lockBtns(true);
+  const section = document.getElementById('section-plage');
+  section.style.display = 'block';
+  const content = document.getElementById('plage-progress-content');
+  
+  // Construire la liste des dates
+  const dates = [];
+  for (let i=0; i<diff; i++) {
+    const d = new Date(from); d.setDate(d.getDate()+i);
+    dates.push(d.getFullYear().toString()+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0'));
+  }
+  
+  // Afficher les jours
+  const dayStates = Object.fromEntries(dates.map(d=>([d,'waiting'])));
+  const dayNets = Object.fromEntries(dates.map(d=>([d,null])));
+  
+  function renderPlageProgress() {
+    content.innerHTML = dates.map(d => {
+      const st = dayStates[d];
+      const net = dayNets[d];
+      const netStr = net !== null ? (net>=0?'<span class="result-pos">+'+net.toFixed(1)+'€</span>':'<span class="result-neg">'+net.toFixed(1)+'€</span>') : '';
+      return `<div class="plage-day">
+        <div class="plage-day-label">${apiToDisplay(d).slice(0,5)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${st==='done'?100:st==='running'?50:0}%"></div></div>
+        <div class="plage-day-status ${st}">${st==='done'?netStr:st==='running'?'<span style="color:var(--amber)">En cours...</span>':'<span style="color:var(--text3)">En attente</span>'}</div>
+      </div>`;
+    }).join('');
+  }
+  
+  let totalNet = 0;
+  for (const d of dates) {
+    dayStates[d] = 'running';
+    renderPlageProgress();
+    try {
+      await runPipeline(d);
+      const pnlResp = await fetch('/pmu/query_day_moulinette_pnl.php?date='+d+'&_ts='+Date.now());
+      const pnl = await pnlResp.json();
+      dayNets[d] = pnl.resultat_net_total || 0;
+      totalNet += dayNets[d];
+      dayStates[d] = 'done';
+    } catch(e) {
+      dayNets[d] = 0;
+      dayStates[d] = 'done';
+    }
+    renderPlageProgress();
+  }
+  
+  document.getElementById('badge-plage').textContent = 'Terminé — NET: '+(totalNet>=0?'+':'')+totalNet.toFixed(1)+'€';
+  document.getElementById('badge-plage').className = totalNet>=0 ? 'section-badge green' : 'section-badge red';
+  log('Plage terminée — NET total: '+(totalNet>=0?'+':'')+totalNet.toFixed(1)+'€', 'success');
+  setStatus('Plage terminée.');
+  setBadge('success', 'Plage terminée');
+  lockBtns(false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NORMALISATION / COURSES FULL
+// ═══════════════════════════════════════════════════════════════
+function firstNonEmpty(...vals) {
+  for (const v of vals) {
+    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+  }
+  return '';
+}
+function normalizeCourseCode(item) {
+  const reunion = firstNonEmpty(item.reunion, item.reunion_num, item.reunionNum, item.num_reunion, item.numReunion, item.R);
+  const course = firstNonEmpty(item.course, item.course_num, item.courseNum, item.num_course, item.numCourse, item.C);
+  const r = String(reunion || '').replace(/^R/i,'').trim();
+  const c = String(course || '').replace(/^C/i,'').trim();
+  if (!r && !c) return '—';
+  return `R${r}C${c}`;
+}
+function normalizeHippodrome(item) {
+  return firstNonEmpty(item.hippodrome_libelle, item.hippodrome, item.hippodrome_nom, item.reunion_hippodrome, item.hippodromeLibelle, item.hippodrome_name, '—');
+}
+function normalizePartants(item) {
+  return firstNonEmpty(item.nombre_declares_partants, item.nombre_partants, item.partants, item.nb_partants, item.nombreDeclaresPartants, item.nombrePartants, '—');
+}
+function normalizeDistance(item) {
+  const d = firstNonEmpty(item.distance, item.distance_course, item.dist);
+  return d ? `${d}m` : '—';
+}
+function normalizeStatut(item) {
+  return firstNonEmpty(item.statut, item.categorie_statut, item.categorieStatut, item.status, '—');
+}
+function normalizeLibelle(item) {
+  return firstNonEmpty(item.libelle, item.libelle_court, item.libelleCourt, item.nom_course, item.name, '—');
+}
+function normalizeHeure(item) {
+  return firstNonEmpty(item.heure_depart, item.heureDepart, item.depart, '—');
+}
+function normalizeDiscipline(item) {
+  return firstNonEmpty(item.discipline, item.specialite, item.specialite_course, '—');
+}
+
+function extractRows(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.details)) return payload.details;
+  if (Array.isArray(payload.rows)) return payload.rows;
+  if (Array.isArray(payload.courses)) return payload.courses;
+  return [];
+}
+
+function renderFullCourses(payload) {
+  const tbody = document.getElementById('full-tbody');
+  const badge = document.getElementById('badge-full');
+  const rows = extractRows(payload)
+    .map(item => ({
+      ...item,
+      _heure: normalizeHeure(item),
+      _code: normalizeCourseCode(item),
+      _hippodrome: normalizeHippodrome(item),
+      _libelle: normalizeLibelle(item),
+      _discipline: normalizeDiscipline(item),
+      _distance: normalizeDistance(item),
+      _partants: normalizePartants(item),
+      _statut: normalizeStatut(item),
+    }))
+    .sort((a,b) => String(a._heure).localeCompare(String(b._heure)) || String(a._code).localeCompare(String(b._code)));
+
+  badge.textContent = rows.length ? `${rows.length} courses` : '0 course';
+  badge.className = rows.length ? 'section-badge green' : 'section-badge';
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3);">Aucune course affichable.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(item => `
+    <tr>
+      <td>${item._heure}</td>
+      <td>${item._code}</td>
+      <td class="course-name" title="${item._hippodrome}">${item._hippodrome}</td>
+      <td class="course-name" title="${item._libelle}">${item._libelle}</td>
+      <td>${item._discipline}</td>
+      <td>${item._distance}</td>
+      <td>${item._partants}</td>
+      <td><span class="pill ${String(item._statut).toUpperCase().includes('OUVERT') ? 'won' : 'pending'}">${item._statut}</span></td>
+    </tr>
+  `).join('');
+}
+
+async function loadFullDay() {
+  try {
+    const resp = await fetch('/pmu/query_day_full.php?date='+currentDate+'&_ts='+Date.now());
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    const data = await resp.json();
+    renderFullCourses(data);
+  } catch (e) {
+    document.getElementById('full-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--red);">Impossible de charger le programme complet.</td></tr>';
+    document.getElementById('badge-full').textContent = 'Erreur';
+    document.getElementById('badge-full').className = 'section-badge red';
+    log('Erreur programme complet: '+e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderKpis(pnl) {
+  const details = pnl.details || [];
+  const joues = details.filter(d=>d.mise>0);
+  const avenir = details.filter(d=>d.statut==='A_VENIR'||d.statut==='UPCOMING'||(!d.ordre_arrivee&&d.mise>0));
+  const abs = details.filter(d=>d.mise===0||d.statut==='ABSTENTION');
+  const net = pnl.resultat_net_total || 0;
+  
+  document.getElementById('kpi-courses').textContent = pnl.details?.length||'—';
+  document.getElementById('kpi-sel').textContent = joues.length;
+  document.getElementById('kpi-jouees').textContent = joues.filter(d=>d.ordre_arrivee>0).length;
+  document.getElementById('kpi-avenir').textContent = joues.filter(d=>!d.ordre_arrivee).length;
+  document.getElementById('kpi-abs').textContent = abs.length;
+  document.getElementById('kpi-mise').textContent = (pnl.total_mise||0)+'€';
+  document.getElementById('kpi-net').textContent = (net>=0?'+':'')+net.toFixed(1)+'€';
+  document.getElementById('kpi-net').className = 'kpi-value '+(net>0?'green':net<0?'red':'');
+  document.getElementById('kpi-bk').textContent = (pnl.bankroll_fin_theorique||pnl.bankroll_depart||'—')+(pnl.bankroll_fin_theorique?'€':'');
+  
+  document.getElementById('badge-sel').textContent = joues.length+' sélections';
+}
+
+function renderBilan(pnl) {
+  bilanLoaded = true;
+  const net = pnl.resultat_net_total||0;
+  document.getElementById('st-net').textContent = (net>=0?'+':'')+net.toFixed(1)+'€';
+  document.getElementById('st-net').className = 'state-val '+(net>0?'green':net<0?'red':'');
+  document.getElementById('st-bkfin').textContent = (pnl.bankroll_fin_theorique||'—')+'€';
+  document.getElementById('st-paris').textContent = pnl.nb_paris||'—';
+  document.getElementById('st-gagnants').textContent = pnl.nb_gagnants||'—';
+  document.getElementById('st-bilan').innerHTML = '<span style="color:var(--green)">Calculé</span>';
+  
+  const details = pnl.details||[];
+  const joues = details.filter(d=>d.mise>0);
+  document.getElementById('st-sel').textContent = joues.length;
+  document.getElementById('st-abs').textContent = details.filter(d=>!d.mise||d.mise===0).length;
+  document.getElementById('st-ana').innerHTML = '<span style="color:var(--green)">Active</span>';
+}
+
+function renderSelections(pnl) {
+  allSelections = pnl.details || [];
+  renderBilan(pnl);
+  applyFilter();
+}
+
+function filterSel(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  const tbody = document.getElementById('sel-tbody');
+  let data = allSelections;
+  
+  if (currentFilter === 'upcoming') data = data.filter(d=>d.mise>0&&!d.ordre_arrivee);
+  else if (currentFilter === 'played') data = data.filter(d=>d.mise>0&&d.ordre_arrivee>0);
+  else if (currentFilter === 'won') data = data.filter(d=>d.statut==='GAGNE');
+  else if (currentFilter === 'lost') data = data.filter(d=>d.statut==='PERDU');
+  else if (currentFilter === 'abs') data = data.filter(d=>!d.mise||d.mise===0||d.statut==='ABSTENTION');
+  
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text3);">Aucune donnée pour ce filtre.</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = data.map(item => {
+    const sel = item.selection;
+    const net = item.resultat_net || 0;
+    const netClass = net>0?'result-pos':net<0?'result-neg':'result-zero';
+    const netStr = net!==0 ? (net>0?'+':'')+net.toFixed(1)+'€' : (item.mise>0?'—':'');
+    
+    let statut = item.statut||'—';
+    let pillClass = 'abs';
+    if (statut==='GAGNE') pillClass='won';
+    else if (statut==='PERDU') pillClass='lost';
+    else if (statut==='ABSTENTION') pillClass='abs';
+    else if (item.mise>0&&!item.ordre_arrivee) { statut='À VENIR'; pillClass='pending'; }
+    
+    const selStr = sel ? `<span class="num-badge">${sel.num}</span> <span class="sel-name">${sel.nom}</span>` : '<span style="color:var(--text3)">—</span>';
+    const coteStr = sel?.cote ? sel.cote.toFixed(1) : '—';
+    const jtStr = sel?.jt_score ? sel.jt_score.toFixed(2) : '—';
+    const miseStr = item.mise>0 ? item.mise+'€' : '—';
+    
+    return `<tr>
+      <td>${item.heure_depart||'—'}</td>
+      <td>${item.reunion||''}${item.course||''}</td>
+      <td class="course-name" title="${item.libelle||''}">${item.libelle||'—'}</td>
+      <td>${selStr}</td>
+      <td style="color:var(--amber)">${coteStr}</td>
+      <td style="color:var(--blue)">${jtStr}</td>
+      <td style="color:var(--text)">${miseStr}</td>
+      <td>${item.ordre_arrivee?'#'+item.ordre_arrivee:'—'}</td>
+      <td class="${netClass}">${netStr}</td>
+      <td><span class="pill ${pillClass}">${statut}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderImminentes(data) {
+  const content = document.getElementById('immin-content');
+  const badge = document.getElementById('badge-immin');
+  
+  if (!data.prochaine && (!data.toutes_courses || !data.toutes_courses.length)) {
+    badge.textContent = '0 course';
+    badge.className = 'section-badge';
+    content.innerHTML = '<div class="empty-state">Aucune course imminente.</div>';
+    return;
+  }
+  
+  const courses = data.toutes_courses || (data.prochaine ? [data.prochaine] : []);
+  badge.textContent = courses.length+' course'+(courses.length>1?'s':'');
+  badge.className = 'section-badge amber';
+  
+  content.innerHTML = courses.slice(0,3).map(c => {
+    const sel = c.selection;
+    return `<div class="imminent-race">
+      <div class="imminent-head">
+        <div>
+          <div class="imminent-rc">${c.reunion||''} ${c.course||''}</div>
+          <div class="imminent-libelle">${c.libelle||'—'}</div>
+        </div>
+        <div class="imminent-time">${c.heure_depart||'—'}</div>
+      </div>
+      ${sel ? `<div class="imminent-sel">
+        <span class="num-badge">${sel.num}</span> <strong>${sel.nom}</strong>
+        <span class="imminent-cote">&nbsp;· Cote ${sel.cote||'?'}</span>
+      </div>` : '<div class="imminent-sel" style="color:var(--text3)">Aucune sélection</div>'}
+      <div class="imminent-actions">
+        <button class="btn-sm green" onclick="alert('Ticket: ${c.reunion} ${c.course} - '+(${JSON.stringify(sel)}?${JSON.stringify(sel?.nom||'')}:'—'))">Voir ticket</button>
+        <button class="btn-sm ghost" onclick="document.getElementById(\'course-input\').value='${c.reunion||''}${c.course||''}';analyserCourse()">Analyser</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WATCHER POLLING
+// ═══════════════════════════════════════════════════════════════
+async function pollWatcher() {
+  try {
+    const resp = await fetch('/pmu/watcher_status.php?_ts='+Date.now());
+    const data = await resp.json();
+    const dot = document.getElementById('watcher-dot');
+    const detail = document.getElementById('watcher-detail');
+    const lastT = document.getElementById('last-ticket');
+    
+    const running = data.watcher_status==='running' && !data.is_stale;
+    dot.className = 'watcher-dot' + (running?'':' stale');
+    
+    detail.innerHTML = `
+      Topic: <strong>${data.ntfy_topic||'—'}</strong><br>
+      Activité: il y a ${Math.round(data.age_seconds||0)}s<br>
+      Envois: ${data.sent_count||0}
+    `;
+    
+    if (data.last_ticket) {
+      lastT.style.display = 'block';
+      lastT.textContent = '→ '+data.last_ticket;
+    }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  JOURNAL
+// ═══════════════════════════════════════════════════════════════
+function log(msg, type='info') {
+  const body = document.getElementById('journal-body');
+  const d = new Date();
+  const ts = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+  const entry = document.createElement('div');
+  entry.className = 'journal-entry '+type;
+  entry.innerHTML = `<span class="ts">[${ts}]</span> <span class="msg">${msg}</span>`;
+  body.insertBefore(entry, body.firstChild);
+  // Garder max 50 entrées
+  while (body.children.length > 50) body.removeChild(body.lastChild);
+}
+function setStatus(msg, isError=false) {
+  const box = document.getElementById('status-box');
+  box.innerHTML = msg;
+  box.className = 'status-box'+(isError?' error':'');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTO-LOAD & STATE RESET
+// ═══════════════════════════════════════════════════════════════
+function resetAnalysisState() {
+  analysisLoaded = false;
+  bilanLoaded = false;
+  currentPnlData = null;
+  allSelections = [];
+  document.getElementById('sel-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);">Lance l\'analyse pour charger les sélections.</td></tr>';
+  document.getElementById('immin-content').innerHTML = '<div class="empty-state">Lance l\'analyse pour voir les courses imminentes.</div>';
+  document.getElementById('section-plage').style.display = 'none';
+  setBadge('idle','');
+  ['kpi-courses','kpi-sel','kpi-jouees','kpi-avenir','kpi-abs','kpi-mise','kpi-net','kpi-bk'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) { el.textContent='—'; el.className='kpi-value'; }
+  });
+  ['st-date','st-courses','st-prog','st-sel','st-abs','st-ana','st-net','st-bkfin','st-paris','st-gagnants','st-bilan'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) { el.textContent='—'; el.className='state-val'; }
+  });
+}
+
+async function autoLoad() {
+  await loadFullDay();
+  // Tenter de charger les données existantes sans pipeline
+  try {
+    const pnlResp = await fetch('/pmu/query_day_moulinette_pnl.php?date='+currentDate+'&_ts='+Date.now());
+    if (!pnlResp.ok) return;
+    const pnl = await pnlResp.json();
+    if (pnl.success && pnl.details && pnl.details.length > 0) {
+      currentPnlData = pnl;
+      analysisLoaded = true;
+      bilanLoaded = true;
+      renderSelections(pnl);
+      renderKpis(pnl);
+      document.getElementById('st-date').textContent = apiToDisplay(currentDate);
+      document.getElementById('st-prog').innerHTML = '<span style="color:var(--green)">Chargé</span>';
+      log('Données existantes chargées pour le '+apiToDisplay(currentDate), 'success');
+    }
+  } catch(e) {}
+  
+  // Charger les imminentes
+  try {
+    const tresp = await fetch('/pmu/ticket_prochain.php?date='+currentDate+'&_ts='+Date.now());
+    const tdata = await tresp.json();
+    renderImminentes(tdata);
+  } catch(e) {}
+}
+
+function saveBankroll(v) {
+  localStorage.setItem('pmu_bankroll', v);
+}
+function loadBankroll() {
+  const v = localStorage.getItem('pmu_bankroll');
+  if (v) document.getElementById('bankroll').value = v;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+async function init() {
+  loadBankroll();
+  updateDateDisplay();
+  
+  // Activer les alertes par défaut
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      alertsActive = true;
+      updateAlertBtn();
+      startTicketPolling();
+      log('Alertes activées automatiquement.', 'success');
+    } else if (Notification.permission === 'default') {
+      // Demander la permission au démarrage
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        alertsActive = true;
+        updateAlertBtn();
+        startTicketPolling();
+        log('Alertes activées au démarrage.', 'success');
+      } else {
+        log('Alertes non autorisées. Cliquez sur le bouton pour activer.', 'warn');
+      }
+    }
+  }
+  
+  log('Dashboard PMU v2 initialisé.', 'info');
+  
+  // Auto-charger les données du jour
+  await autoLoad();
+  
+  // Polling watcher
+  pollWatcher();
+  setInterval(pollWatcher, 30000);
+  
+  // Polling imminentes si alertes actives
+  setInterval(()=>{
+    if (analysisLoaded || true) pollTicket();
+  }, 60000);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Runtime and generated artifacts
+data/
+__pycache__/
+*.pyc
+*.log
+*.out.log
+*.err.log
+.pmu_session/
+agent_state/
+outputs/
+tmp_*/
+debug_bundle_*/
+
+# Local backups and scratch files
+*.bak
+*.tmp
+*.swp
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

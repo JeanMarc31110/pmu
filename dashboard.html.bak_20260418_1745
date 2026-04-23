@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMU Moulinette</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #fbf8f2;
+      --card: #fffdf8;
+      --border: #d8cfbf;
+      --accent: #0f766e;
+      --green: #2f855a;
+      --red: #c53030;
+      --orange: #c77d18;
+      --text: #231c17;
+      --muted: #786b5d;
+      --radius: 16px;
+      --shadow: 0 12px 28px rgba(52, 36, 18, 0.08);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(199,125,24,0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(15,118,110,0.10), transparent 24%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      box-shadow: var(--shadow);
+    }
+    header h1 { font-size: 1.45rem; font-weight: 700; color: var(--text); }
+    header p  { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-body { padding: 16px 18px; }
+
+    /* ── DATE PICKER ── */
+    .date-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .date-nav button {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .date-nav button:hover { background: var(--border); }
+    #selected-date-label { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+
+    input[type="date"] {
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 9px 12px;
+      cursor: pointer;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    input[type="date"]:focus { border-color: var(--accent); }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+    /* ── QUICK DATES ── */
+    .quick-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+    .quick-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.78rem;
+      padding: 7px 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .quick-btn:hover   { border-color: var(--accent); color: var(--accent); }
+    .quick-btn.active  { border-color: var(--accent); background: rgba(15,118,110,0.10); color: var(--accent); }
+
+    /* ── ACTION BUTTONS ── */
+    .action-btn {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .action-btn:last-child { margin-bottom: 0; }
+    .action-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-import  { background: #174e9e; color: #fff; }
+    .btn-analyse { background: #dff5ea; color: #17462f; border: 1px solid rgba(47,133,90,0.18); }
+    .btn-gains   { background: #f9ead7; color: #6a3d00; border: 1px solid rgba(199,125,24,0.18); }
+    .btn-all     { background: linear-gradient(135deg, #0f766e, #c77d18); color: #fff; }
+
+    /* ── MULTI-DATE ── */
+    .multi-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    .multi-toggle input { accent-color: var(--accent); cursor: pointer; }
+    .multi-section { display: none; }
+    .multi-section.visible { display: block; }
+    .multi-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .multi-row label { font-size: 0.78rem; color: var(--muted); min-width: 34px; }
+    .multi-row input[type="date"] { margin-bottom: 0; flex: 1; }
+    .multi-info {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    /* ── STATUS ── */
+    #statusBox {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 10px 14px;
+      background: #fff;
+      border-radius: 8px;
+      min-height: 36px;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+    }
+
+    /* ── PROGRESS ── */
+    .progress-wrap { margin-bottom: 6px; display: none; }
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    .progress-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 5px;
+      text-align: right;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main-col { display: flex; flex-direction: column; gap: 16px; }
+    .hero-card {
+      background: linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,248,239,.92));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 24px 26px;
+    }
+    .hero-kicker {
+      font-size: .76rem;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .hero-card h2 {
+      font-size: 1.7rem;
+      line-height: 1.08;
+      margin-bottom: 8px;
+    }
+    .hero-card p {
+      color: var(--muted);
+      font-size: .94rem;
+      max-width: 760px;
+      line-height: 1.5;
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, .8fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .primary-col,
+    .side-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── SUMMARY GRID ── */
+    #summary {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .box .k { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.6px; }
+    .box .v { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+
+    /* ── RESULTS ── */
+    #results { display: flex; flex-direction: column; gap: 12px; }
+
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-head .title { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+    .result-card .status { padding: 12px 18px; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    .result-card .meta {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-card .meta .box { padding: 8px 12px; flex: 1; min-width: 100px; }
+    .result-card .meta .box .v { font-size: 0.95rem; }
+
+    /* ── PILL ── */
+    .pill {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .pill.ok   { background: rgba(62,207,142,0.15); color: var(--green); }
+    .pill.warn { background: rgba(246,173,85,0.15);  color: var(--orange); }
+    .pill.no   { background: rgba(245,101,101,0.15); color: var(--red); }
+
+    .section-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid rgba(216,207,191,.8);
+    }
+    .section-head h2 {
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .section-head p {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .ghost-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 14px 20px 0;
+    }
+    .chip-filter {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .chip-filter.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(15,118,110,0.08);
+    }
+    .urgent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      padding: 18px 20px 20px;
+    }
+    .urgent-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .urgent-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .urgent-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+    .urgent-sub { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+    .count-badge {
+      background: rgba(199,125,24,0.12);
+      color: var(--orange);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .ticket-btn {
+      margin-top: 12px;
+      background: rgba(15,118,110,0.10);
+      color: var(--accent);
+      border: 1px solid rgba(15,118,110,0.18);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: default;
+      display: inline-block;
+    }
+    .empty-state {
+      padding: 18px 20px 20px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .muted-note {
+      padding: 0 20px 18px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .state-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px 20px 20px;
+    }
+    .state-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 14px;
+    }
+    .state-item strong {
+      display: block;
+      font-size: 0.88rem;
+      margin-bottom: 3px;
+      color: var(--text);
+    }
+    .state-item span {
+      color: var(--muted);
+      font-size: 0.79rem;
+      line-height: 1.45;
+    }
+    .journal-box {
+      background: #1f1b18;
+      color: #f6efe6;
+      border-radius: 18px;
+      margin: 0 20px 20px;
+      padding: 16px;
+      min-height: 260px;
+      font-family: Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.65;
+      overflow: auto;
+    }
+    .journal-line {
+      margin-bottom: 8px;
+      color: #e9dccb;
+    }
+    .journal-line .ts { color: #8cc9c3; }
+    .journal-line.ok { color: #a7efc0; }
+    .journal-line.warn { color: #f2c078; }
+    .journal-line.err { color: #f3a0a0; }
+
+    /* ── RESULT STATE HEADER ── */
+    #resultState { display: inline-block; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; padding: 0 18px 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th {
+      text-align: left; padding: 8px 12px;
+      font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.7px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(15,118,110,0.03); }
+
+    /* ── BATCH PROGRESS ── */
+    .batch-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .batch-card h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; }
+    .batch-day {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.8rem;
+    }
+    .batch-day:last-child { border-bottom: none; }
+    .batch-day .d-label { width: 90px; color: var(--muted); }
+    .batch-day .d-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .batch-day .d-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .batch-day .d-status { width: 80px; text-align: right; font-size: 0.72rem; }
+    .d-fill.pending  { background: var(--border); width: 0%; }
+    .d-fill.running  { background: var(--accent); width: 50%; animation: pulse-bar 1s infinite; }
+    .d-fill.done     { background: var(--green); width: 100%; }
+    .d-fill.error    { background: var(--red); width: 100%; }
+    @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      #summary { grid-template-columns: repeat(2,1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>PMU Moulinette</h1>
+  <p>Flux du jour, analyse, départs imminents et lecture complète des courses sélectionnées.</p>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+
+    <!-- Date picker -->
+    <div class="card">
+      <div class="card-title">Date</div>
+      <div class="card-body">
+        <div class="date-nav">
+          <button id="btnPrev" title="Jour précédent">◀</button>
+          <span id="selected-date-label">—</span>
+          <button id="btnNext" title="Jour suivant">▶</button>
+        </div>
+        <input type="date" id="datepicker">
+        <div class="quick-btns">
+          <button class="quick-btn" data-offset="0">Aujourd'hui</button>
+          <button class="quick-btn" data-offset="-1">Hier</button>
+          <button class="quick-btn" data-offset="-2">Avant-hier</button>
+          <button class="quick-btn" data-offset="-7">Il y a 7j</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-title">Actions</div>
+      <div class="card-body">
+        <button class="action-btn btn-all"     id="btnAll"     onclick="runAll()">Flux complet</button>
+        <button class="action-btn btn-import"  id="btnImport"  onclick="runPipeline()">Préparer les données</button>
+        <button class="action-btn btn-analyse" id="btnAnalyse" onclick="runAnalysis()">Lancer l’analyse</button>
+        <button class="action-btn btn-gains"   id="btnGains"   onclick="runPnl()">Calculer les gains</button>
+      </div>
+    </div>
+
+    <!-- Multi-dates -->
+    <div class="card">
+      <div class="card-title">Plage</div>
+      <div class="card-body">
+        <label class="multi-toggle">
+          <input type="checkbox" id="multiToggle"> Activer le mode plage
+        </label>
+        <div class="multi-section" id="multiSection">
+          <div class="multi-row">
+            <label>Du</label>
+            <input type="date" id="dateFrom">
+          </div>
+          <div class="multi-row">
+            <label>Au</label>
+            <input type="date" id="dateTo">
+          </div>
+          <div class="multi-info" id="multiInfo">Sélectionnez une plage pour voir le nombre de jours.</div>
+          <button class="action-btn btn-all" id="btnBatch" onclick="runBatch()">Lancer la plage</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="card">
+      <div class="card-title">Statut</div>
+      <div class="card-body" style="padding:12px 14px">
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-label" id="progressLabel"></div>
+        </div>
+        <div id="statusBox">Prêt.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── MAIN ── -->
+  <div class="main-col">
+    <section class="hero-card">
+      <div class="hero-kicker">Prévisualisation Validée</div>
+      <h2>Départs dans 10 min, puis toutes les sélections du jour.</h2>
+      <p>La page met en avant les courses imminentes, puis déroule la liste complète des courses sélectionnées avec un état système simple et un journal technique lisible.</p>
+    </section>
+    <div id="summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0" id="resultHeader" style="display:none">
+      <span id="resultState" class="pill warn">Aucune action</span>
+    </div>
+    <div class="main-grid">
+      <div class="primary-col">
+        <div id="results"></div>
+        <div id="batchResults"></div>
+      </div>
+      <aside class="side-col">
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>État système</h2>
+              <p>Lecture rapide de la journée en cours.</p>
+            </div>
+          </div>
+          <div class="state-stack" id="stateSystem"></div>
+        </section>
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>Journal</h2>
+              <p>Étapes utiles et derniers retours du pipeline.</p>
+            </div>
+          </div>
+          <div class="journal-box" id="journalBox"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const BASE_URL = window.location.origin + "/pmu";
+
+  // ── FORMAT ──────────────────────────────────────────────────────────
+  function toJJMMAAAA(dateStr) {
+    // dateStr = "YYYY-MM-DD"
+    const [y, m, d] = dateStr.split("-");
+    return d + m + y;
+  }
+  function fromJJMMAAAA(s) {
+    // s = "DDMMYYYY"
+    return s.slice(4) + "-" + s.slice(2, 4) + "-" + s.slice(0, 2);
+  }
+  function labelDate(dateStr) {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+  }
+  function isoToday() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  function addDays(iso, n) {
+    const d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function daysBetween(from, to) {
+    return Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+  }
+
+  // ── DATE STATE ────────────────────────────────────────────────────────
+  let currentIso = isoToday();
+
+  function setDate(iso) {
+    currentIso = iso;
+    $("datepicker").value = iso;
+    $("selected-date-label").textContent = labelDate(iso);
+    // Update quick btn active state
+    const today = isoToday();
+    document.querySelectorAll(".quick-btn").forEach(btn => {
+      const offset = parseInt(btn.dataset.offset);
+      btn.classList.toggle("active", addDays(today, offset) === iso);
+    });
+  }
+
+  // Init
+  setDate(isoToday());
+
+  // Date picker events
+  $("datepicker").addEventListener("change", e => setDate(e.target.value));
+  $("btnPrev").addEventListener("click", () => setDate(addDays(currentIso, -1)));
+  $("btnNext").addEventListener("click", () => setDate(addDays(currentIso, +1)));
+
+  document.querySelectorAll(".quick-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      setDate(addDays(isoToday(), parseInt(btn.dataset.offset)));
+    });
+  });
+
+  // Multi-date toggle
+  $("multiToggle").addEventListener("change", e => {
+    $("multiSection").classList.toggle("visible", e.target.checked);
+  });
+
+  function updateMultiInfo() {
+    const from = $("dateFrom").value;
+    const to   = $("dateTo").value;
+    if (from && to && to >= from) {
+      const n = daysBetween(from, to);
+      $("multiInfo").textContent = `${n} jour(s) sélectionné(s) — Pipeline complet sur chaque jour.`;
+    } else {
+      $("multiInfo").textContent = "Sélectionnez une plage valide.";
+    }
+  }
+  $("dateFrom").addEventListener("change", updateMultiInfo);
+  $("dateTo").addEventListener("change", updateMultiInfo);
+
+  // ── HELPERS ───────────────────────────────────────────────────────────
+  function setStatus(msg, isError = false) {
+    $("statusBox").textContent = msg;
+    $("statusBox").style.color = isError ? "#f56565" : "#5a6488";
+    pushJournal(msg, isError ? "err" : "info");
+  }
+
+  function setResultState(text, mode = "warn") {
+    const el = $("resultState");
+    el.textContent = text;
+    el.className = "pill " + mode;
+  }
+
+  let currentAnalysisJson = null;
+  let currentCourseFilter = "all";
+  let fullSelectionListOpen = false;
+  let journalEntries = [];
+
+  function timeStamp() {
+    return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function pushJournal(message, level = "info") {
+    if (!message) return;
+    journalEntries.unshift({ ts: timeStamp(), message, level });
+    journalEntries = journalEntries.slice(0, 18);
+    renderJournal();
+  }
+
+  function renderJournal() {
+    const node = $("journalBox");
+    if (!node) return;
+    if (!journalEntries.length) {
+      node.innerHTML = `<div class="journal-line"><span class="ts">[--:--:--]</span> Journal prêt.</div>`;
+      return;
+    }
+    node.innerHTML = journalEntries.map(entry => `
+      <div class="journal-line ${entry.level}">
+        <span class="ts">[${entry.ts}]</span> ${entry.message}
+      </div>
+    `).join("");
+  }
+
+  function renderSystemState(cards = []) {
+    const node = $("stateSystem");
+    if (!node) return;
+    const items = cards.length ? cards : [
+      { title: "Programme du jour", text: "En attente d’une action.", badge: "warn", label: "À lancer" },
+      { title: "Analyse moulinette", text: "Aucune lecture chargée.", badge: "warn", label: "En attente" },
+      { title: "Bilan financier", text: "Calcul non encore exécuté.", badge: "warn", label: "À calculer" },
+    ];
+    node.innerHTML = items.map(item => `
+      <div class="state-item">
+        <div>
+          <strong>${item.title}</strong>
+          <span>${item.text}</span>
+        </div>
+        <span class="pill ${item.badge || "warn"}">${item.label}</span>
+      </div>
+    `).join("");
+  }
+
+  function setProgress(pct, label) {
+    $("progressWrap").style.display = "block";
+    $("progressFill").style.width = pct + "%";
+    $("progressLabel").textContent = label;
+    if (pct >= 100) setTimeout(() => { $("progressWrap").style.display = "none"; }, 1500);
+  }
+
+  function lockBtns(lock) {
+    ["btnAll","btnImport","btnAnalyse","btnGains","btnBatch"].forEach(id => {
+      $(id).disabled = lock;
+    });
+  }
+
+  function safeParseJson(text) {
+    if (typeof text !== "string") return null;
+    let cleaned = text.replace(/^\uFEFF/, "").trim();
+    try { return JSON.parse(cleaned); } catch {}
+    const fb = cleaned.indexOf("{"), lb = cleaned.lastIndexOf("}");
+    if (fb !== -1 && lb > fb) { try { return JSON.parse(cleaned.slice(fb, lb+1)); } catch {} }
+    const fb2 = cleaned.indexOf("["), lb2 = cleaned.lastIndexOf("]");
+    if (fb2 !== -1 && lb2 > fb2) { try { return JSON.parse(cleaned.slice(fb2, lb2+1)); } catch {} }
+    return null;
+  }
+
+  async function callScript(script, params = {}) {
+    const url = new URL(`${BASE_URL}/${script}`);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+    const res = await fetch(url.toString());
+    const txt = await res.text();
+    const json = safeParseJson(txt);
+    if (!json) throw new Error(`Réponse non JSON sur ${script}`);
+    if (!json.success) throw new Error(json.message || `Erreur sur ${script}`);
+    return json;
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────
+  function renderImportResult(lines) {
+    $("results").innerHTML = `
+      <div class="result-card">
+        <div class="result-head">
+          <div class="title">Pipeline terminé</div>
+          <div class="pill ok">Succès</div>
+        </div>
+        <div class="status">${lines.join("<br>")}</div>
+      </div>`;
+    renderSystemState([
+      { title: "Programme du jour", text: `Import et préparation terminés. ${lines[0] || ""}`.trim(), badge: "ok", label: "OK" },
+      { title: "Analyse moulinette", text: "Prête à être lancée sur la date sélectionnée.", badge: "warn", label: "Prête" },
+      { title: "Bilan financier", text: "Disponible après l’analyse et le calcul des gains.", badge: "warn", label: "En attente" },
+    ]);
+  }
+
+  function renderSummaryCards(values = {}) {
+    $("summary").innerHTML = `
+      <div class="box"><div class="k">Courses</div><div class="v">${values.courses ?? "—"}</div></div>
+      <div class="box"><div class="k">Courses Jouées</div><div class="v">${values.played ?? "—"}</div></div>
+      <div class="box"><div class="k">Abstentions</div><div class="v">${values.abstentions ?? "—"}</div></div>
+      <div class="box"><div class="k">Net Du Jour</div><div class="v" style="color:${values.netColor || "var(--text)"}">${values.net ?? "—"}</div></div>
+    `;
+  }
+
+  function renderDashboardPlaceholder() {
+    $("results").innerHTML = `
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <h2>Départs dans 10 min</h2>
+            <p>Les courses imminentes apparaîtront ici après chargement de l’analyse.</p>
+          </div>
+          <span class="pill warn">En attente</span>
+        </div>
+        <div class="empty-state">
+          Lance l’analyse du jour pour afficher les courses qui partent dans 10 minutes avec leurs sélections.
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <h2>Toutes les courses sélectionnées du jour</h2>
+            <p>La liste complète des courses retenues sera affichée ici, triée par heure.</p>
+          </div>
+          <button class="ghost-btn" disabled>Ouvrir la liste complète</button>
+        </div>
+        <div class="chip-row">
+          <button class="chip-filter active">Toutes</button>
+          <button class="chip-filter">À venir</button>
+          <button class="chip-filter">Jouées</button>
+        </div>
+        <div class="empty-state">
+          Aucune donnée chargée pour le moment. Utilise "Préparer les données" puis "Lancer l’analyse".
+        </div>
+      </section>
+    `;
+  }
+
+  function isPlayedStatus(value) {
+    const raw = String(value || "").toUpperCase();
+    return raw.includes("FIN_COURSE") || raw.includes("ARRIVEE");
+  }
+
+  function buildRaceDateTime(iso, hhmm) {
+    if (!iso || !hhmm || !hhmm.includes(":")) return null;
+    return new Date(`${iso}T${hhmm}:00`);
+  }
+
+  function decorateAnalysisItem(item, iso) {
+    const played = isPlayedStatus(item.statut);
+    const raceAt = buildRaceDateTime(iso, item.heure_depart);
+    const now = new Date();
+    let minutesToDepart = null;
+    if (raceAt && iso === isoToday() && !played) {
+      minutesToDepart = Math.round((raceAt.getTime() - now.getTime()) / 60000);
+    }
+    return {
+      ...item,
+      played,
+      hasSelection: item.selection !== null,
+      minutesToDepart,
+    };
+  }
+
+  function filterSelectedCourses(items) {
+    if (currentCourseFilter === "upcoming") return items.filter(item => !item.played);
+    if (currentCourseFilter === "played") return items.filter(item => item.played);
+    return items;
+  }
+
+  function renderUrgentCard(item) {
+    const selectionText = item.selection
+      ? `${item.selection.num} - ${item.selection.nom} · cote ${item.selection.cote}`
+      : "Aucune sélection validée pour cette course.";
+    const decisionBadge = item.selection
+      ? `<span class="pill ok">Sélection validée</span>`
+      : `<span class="pill warn">Abstention</span>`;
+    return `
+      <article class="urgent-card">
+        <div class="urgent-top">
+          <div>
+            <div class="urgent-title">${item.reunion} ${item.course} · ${item.heure_depart || "--:--"}</div>
+            <div class="urgent-sub">${item.libelle || "Course"} · ${item.discipline || "—"} · ${item.distance || "—"} m</div>
+          </div>
+          <div class="count-badge">Dans ${item.minutesToDepart} min</div>
+        </div>
+        ${decisionBadge}
+        <div class="urgent-sub" style="margin-top:10px">${selectionText}</div>
+        <div class="ticket-btn">Voir le ticket</div>
+      </article>`;
+  }
+
+  function renderSelectedRows(items) {
+    return items.map(item => `
+      <tr>
+        <td>${item.heure_depart || "—"}</td>
+        <td>${item.reunion} ${item.course}</td>
+        <td>${item.libelle || "—"}</td>
+        <td>${item.selection ? `${item.selection.num} - ${item.selection.nom}` : "—"}</td>
+        <td>${item.selection ? item.selection.cote : "—"}</td>
+        <td>${item.selection ? `P${item.selection.profil}` : "—"}</td>
+        <td>${item.played ? "Jouée" : "À venir"}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderAnalysisDashboard() {
+    if (!currentAnalysisJson) return;
+    const dateIso = fromJJMMAAAA(currentAnalysisJson.date);
+    const data = Array.isArray(currentAnalysisJson.data) ? currentAnalysisJson.data.map(item => decorateAnalysisItem(item, dateIso)) : [];
+    const urgent = data
+      .filter(item => item.minutesToDepart !== null && item.minutesToDepart >= 0 && item.minutesToDepart <= 10)
+      .sort((a, b) => a.minutesToDepart - b.minutesToDepart);
+    const selected = data.filter(item => item.hasSelection).sort((a, b) => (a.heure_depart || "").localeCompare(b.heure_depart || ""));
+    const filtered = filterSelectedCourses(selected);
+    const visible = fullSelectionListOpen ? filtered : filtered.slice(0, 8);
+    const filterOptions = [
+      ["all", `Toutes (${selected.length})`],
+      ["upcoming", `À venir (${selected.filter(item => !item.played).length})`],
+      ["played", `Jouées (${selected.filter(item => item.played).length})`],
+    ];
+
+    renderSystemState([
+      { title: "Programme du jour", text: `${currentAnalysisJson.courses_count || data.length} course(s) lues pour ${currentAnalysisJson.date}.`, badge: "ok", label: "Chargé" },
+      { title: "Analyse moulinette", text: `${selected.length} course(s) sélectionnée(s), ${urgent.length} départ(s) dans 10 min.`, badge: "ok", label: "Active" },
+      { title: "Bilan financier", text: "Lancer le calcul pour afficher le résultat net du jour.", badge: "warn", label: "À faire" },
+    ]);
+
+    $("results").innerHTML = `
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <h2>Départs dans 10 min</h2>
+            <p>Les courses imminentes sur la date sélectionnée.</p>
+          </div>
+          <span class="pill ${urgent.length ? "ok" : "warn"}">${urgent.length} course(s)</span>
+        </div>
+        ${urgent.length ? `<div class="urgent-grid">${urgent.map(renderUrgentCard).join("")}</div>` : `
+          <div class="empty-state">
+            ${dateIso === isoToday()
+              ? "Aucune course ne part dans les 10 prochaines minutes pour le moment."
+              : "Cette zone s’active surtout sur la date du jour, en fonction de l’heure actuelle."}
+          </div>`}
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <h2>Toutes les courses sélectionnées du jour</h2>
+            <p>Liste complète des courses retenues par la moulinette, triées par heure.</p>
+          </div>
+          <button class="ghost-btn" data-toggle-selected="true">${fullSelectionListOpen ? "Réduire la liste" : "Ouvrir la liste complète"}</button>
+        </div>
+        <div class="chip-row">
+          ${filterOptions.map(([value, label]) => `
+            <button class="chip-filter ${currentCourseFilter === value ? "active" : ""}" data-course-filter="${value}">${label}</button>
+          `).join("")}
+        </div>
+        ${filtered.length ? `
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Heure</th><th>Course</th><th>Libellé</th><th>Sélection</th><th>Cote</th><th>Profil</th><th>Statut</th></tr>
+              </thead>
+              <tbody>${renderSelectedRows(visible)}</tbody>
+            </table>
+          </div>
+          ${!fullSelectionListOpen && filtered.length > visible.length ? `<div class="muted-note">${filtered.length - visible.length} course(s) supplémentaire(s) masquée(s). Utilisez "Ouvrir la liste complète".</div>` : ""}
+        ` : `<div class="empty-state">Aucune course sélectionnée ne correspond au filtre choisi.</div>`}
+      </section>`;
+  }
+
+  function renderSelectionCard(item) {
+    const s = item.selection;
+    const selHtml = s ? `
+      <div class="table-wrap"><table>
+        <thead><tr><th>N°</th><th>Nom</th><th>Profil</th><th>JT Score</th><th>Cote</th><th>Val. handicap</th><th>Mise Kelly</th></tr></thead>
+        <tbody><tr>
+          <td>${s.num}</td><td>${s.nom}</td><td>P${s.profil}</td>
+          <td>${s.jt_score}</td><td>${s.cote}</td>
+          <td>${s.valeur_handicap ?? "—"}</td><td>${s.mise_kelly} €</td>
+        </tr></tbody>
+      </table></div>`
+      : `<div style="padding:12px 18px"><span class="pill warn">Aucun qualifié final — abstention</span></div>`;
+    return `
+      <div class="result-card">
+        <div class="result-head">
+          <div class="title">${item.reunion} ${item.course} — ${item.libelle}</div>
+          <div class="pill ${s ? "ok" : "warn"}">${s ? "Sélection validée" : "Abstention"}</div>
+        </div>
+        <div class="meta">
+          <div class="box"><div class="k">Discipline</div><div class="v">${item.discipline ?? "—"}</div></div>
+          <div class="box"><div class="k">Distance</div><div class="v">${item.distance ?? "—"}</div></div>
+          <div class="box"><div class="k">Candidats</div><div class="v">${item.candidats_eligibles_count}</div></div>
+          <div class="box"><div class="k">Statut</div><div class="v">${item.statut ?? "—"}</div></div>
+        </div>
+        ${selHtml}
+      </div>`;
+  }
+
+  function renderPnlTable(details) {
+    return `
+      <div class="result-card">
+        <div class="result-head">
+          <div class="title">Bilan des gains du jour</div>
+          <div class="pill ok">Calculé</div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Réunion</th><th>Course</th><th>Libellé</th><th>Sélection</th>
+            <th>Mise</th><th>Ordre arrivée</th><th>Statut</th><th>Résultat net</th>
+          </tr></thead>
+          <tbody>
+            ${details.map(d => `<tr>
+              <td>${d.reunion}</td><td>${d.course}</td><td>${d.libelle}</td>
+              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
+              <td>${d.mise ?? 0} €</td><td>${d.ordre_arrivee ?? "—"}</td>
+              <td>${d.statut}</td>
+              <td style="font-weight:600;color:${parseFloat(d.resultat_net)>=0?"var(--green)":"var(--red)"}">${d.resultat_net} €</td>
+            </tr>`).join("")}
+          </tbody>
+        </table></div>
+      </div>`;
+  }
+
+  // ── PIPELINE ──────────────────────────────────────────────────────────
+  async function runPipeline(dateIso = null) {
+    const iso  = dateIso || currentIso;
+    const date = toJJMMAAAA(iso);
+    lockBtns(true); $("results").innerHTML = ""; $("summary").style.display = "none";
+    setResultState("Pipeline en cours", "warn");
+    const steps = [
+      ["1/5 Import des courses...",              () => callScript("fetch_to_sqlite.php",                  { date })],
+      ["2/5 Réparation drivers/jockeys...",      () => callScript("repair_driver_jockey.php",             { date, date_filter: date })],
+      ["3/5 Construction JT...",                 () => callScript("build_jt_reference_from_base.php",     { min_courses: 1 })],
+      ["4/5 Injection des cotes du jour...",     () => callScript("inject_market_odds_day_from_raw.php",  { date })],
+      ["5/5 Rebuild des inputs moulinette...",   () => callScript("build_moulinette_inputs.php",          { date })],
+    ];
+    try {
+      const results = [];
+      for (let i = 0; i < steps.length; i++) {
+        const [label, fn] = steps[i];
+        setStatus(label);
+        setProgress(Math.round((i / steps.length) * 100), `Étape ${i+1}/${steps.length}`);
+        results.push(await fn());
+      }
+      const [a, b, c, d, e] = results;
+      pushJournal("Pipeline complet terminé.", "ok");
+      setProgress(100, "Terminé");
+      $("summary").style.display = "grid";
+      $("summary").innerHTML = `
+        <div class="box"><div class="k">Date importée</div><div class="v">${date}</div></div>
+        <div class="box"><div class="k">Courses</div><div class="v">${a.total_courses_processed ?? 0}</div></div>
+        <div class="box"><div class="k">Participants</div><div class="v">${a.total_participants_inserted ?? 0}</div></div>
+        <div class="box"><div class="k">Qualifiés finaux</div><div class="v">${e.stats?.qualifies_final ?? 0}</div></div>`;
+      renderImportResult([
+        `Drivers réparés : ${b.updated ?? 0}`,
+        `Couples JT construits : ${c.jt_pairs_built ?? 0}`,
+        `Cotes injectées : ${d.inserted ?? 0}`,
+        `Courses touchées : ${d.courses_touched ?? 0}`,
+        `Inputs upserted : ${e.rows_upserted ?? 0}`,
+        `Qualifiés Q5 : ${e.stats?.qualifies_q5 ?? 0}`,
+        `Qualifiés finaux : ${e.stats?.qualifies_final ?? 0}`
+      ]);
+      setResultState("Pipeline terminé", "ok");
+      setStatus("Import et préparation terminés avec succès.");
+      return true;
+    } catch(err) {
+      pushJournal(`Erreur pipeline : ${err.message}`, "err");
+      setResultState("Erreur pipeline", "no");
+      setStatus(err.message, true);
+      $("results").innerHTML = `<div class="result-card"><div class="result-head"><div class="title">Erreur pipeline</div><div class="pill no">Erreur</div></div><div class="status">${err.message}</div></div>`;
+      return false;
+    } finally {
+      if (!dateIso) lockBtns(false);
+    }
+  }
+
+  async function runAnalysis(dateIso = null) {
+    const iso  = dateIso || currentIso;
+    const date = toJJMMAAAA(iso);
+    if (!dateIso) { lockBtns(true); $("results").innerHTML = ""; $("summary").style.display = "none"; }
+    setResultState("Analyse en cours", "warn");
+    try {
+      setStatus("Analyse de la journée en cours...");
+      const json = await callScript("query_day_moulinette_summary.php", { date });
+      const data = Array.isArray(json.data) ? json.data : [];
+      const jouees = data.filter(x => x.selection !== null).length;
+      const abstentions = data.length - jouees;
+      currentAnalysisJson = json;
+      currentCourseFilter = "all";
+      fullSelectionListOpen = false;
+      $("summary").style.display = "grid";
+      $("summary").innerHTML = `
+        <div class="box"><div class="k">Date</div><div class="v">${json.date}</div></div>
+        <div class="box"><div class="k">Courses analysées</div><div class="v">${json.courses_count ?? 0}</div></div>
+        <div class="box"><div class="k">Courses jouées</div><div class="v">${jouees}</div></div>
+        <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>`;
+      renderAnalysisDashboard();
+      pushJournal(`Analyse chargée : ${jouees} course(s) jouée(s), ${abstentions} abstention(s).`, "ok");
+      setResultState("Analyse terminée", "ok");
+      setStatus(`Analyse terminée : ${jouees} course(s) jouée(s), ${abstentions} abstention(s).`);
+      renderSummaryCards({
+        courses: json.courses_count ?? data.length,
+        played: jouees,
+        abstentions: abstentions,
+        net: "À calculer",
+        netColor: "var(--muted)",
+      });
+      return true;
+    } catch(err) {
+      pushJournal(`Erreur analyse : ${err.message}`, "err");
+      setResultState("Erreur analyse", "no");
+      setStatus(err.message, true);
+      $("results").innerHTML = `<div class="result-card"><div class="result-head"><div class="title">Erreur analyse</div><div class="pill no">Erreur</div></div><div class="status">${err.message}</div></div>`;
+      return false;
+    } finally {
+      if (!dateIso) lockBtns(false);
+    }
+  }
+
+  async function runPnl(dateIso = null) {
+    const iso  = dateIso || currentIso;
+    const date = toJJMMAAAA(iso);
+    if (!dateIso) { lockBtns(true); $("results").innerHTML = ""; $("summary").style.display = "none"; }
+    setResultState("Calcul gains en cours", "warn");
+    try {
+      setStatus("Calcul des gains du jour...");
+      const json = await callScript("query_day_moulinette_pnl.php", { date });
+      renderSummaryCards({
+        courses: currentAnalysisJson?.courses_count ?? "—",
+        played: json.nb_paris ?? "—",
+        abstentions: currentAnalysisJson?.abstentions ?? "—",
+        net: `${json.resultat_net_total} €`,
+        netColor: parseFloat(json.resultat_net_total)>=0 ? "var(--green)" : "var(--red)",
+      });
+      $("results").innerHTML = renderPnlTable(json.details || []);
+      renderSystemState([
+        { title: "Programme du jour", text: `${json.date} chargé et exploitable.`, badge: "ok", label: "OK" },
+        { title: "Analyse moulinette", text: `${json.nb_paris || 0} pari(s) pris en compte dans le bilan.`, badge: "ok", label: "Calculée" },
+        { title: "Bilan financier", text: `Résultat net ${json.resultat_net_total} € · bankroll fin ${json.bankroll_fin_theorique} €.`, badge: parseFloat(json.resultat_net_total) >= 0 ? "ok" : "no", label: "Terminé" },
+      ]);
+      pushJournal(`Bilan du jour calculé : ${json.resultat_net_total} € net sur ${json.nb_paris} pari(s).`, parseFloat(json.resultat_net_total) >= 0 ? "ok" : "warn");
+      setResultState("Gains calculés", "ok");
+      setStatus(`Bilan terminé : ${json.nb_paris} pari(s), résultat net ${json.resultat_net_total} €.`);
+      return json;
+    } catch(err) {
+      pushJournal(`Erreur gains : ${err.message}`, "err");
+      setResultState("Erreur gains", "no");
+      setStatus(err.message, true);
+      $("results").innerHTML = `<div class="result-card"><div class="result-head"><div class="title">Erreur gains</div><div class="pill no">Erreur</div></div><div class="status">${err.message}</div></div>`;
+      return null;
+    } finally {
+      if (!dateIso) lockBtns(false);
+    }
+  }
+
+  async function runAll() {
+    lockBtns(true);
+    $("results").innerHTML = ""; $("summary").style.display = "none";
+    setStatus("Lancement du pipeline complet...");
+    const ok1 = await runPipeline(currentIso);
+    if (!ok1) { lockBtns(false); return; }
+    const ok2 = await runAnalysis(currentIso);
+    if (!ok2) { lockBtns(false); return; }
+    await runPnl(currentIso);
+    lockBtns(false);
+  }
+
+  // ── BATCH (plage de dates) ─────────────────────────────────────────────
+  async function runBatch() {
+    const from = $("dateFrom").value;
+    const to   = $("dateTo").value;
+    if (!from || !to || to < from) { setStatus("Plage de dates invalide.", true); return; }
+    const n = daysBetween(from, to);
+    if (n > 30) { setStatus("Plage trop grande (max 30 jours).", true); return; }
+
+    lockBtns(true);
+    $("results").innerHTML = "";
+    $("batchResults").innerHTML = "";
+    $("summary").style.display = "none";
+
+    // Build day list
+    const days = [];
+    for (let i = 0; i < n; i++) days.push(addDays(from, i));
+
+    // Render batch tracker
+    $("batchResults").innerHTML = `
+      <div class="batch-card">
+        <h3>Traitement de la plage — ${days.length} jour(s)</h3>
+        ${days.map(d => `
+          <div class="batch-day" id="batch-${d}">
+            <span class="d-label">${new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})}</span>
+            <div class="d-bar"><div class="d-fill pending" id="fill-${d}"></div></div>
+            <span class="d-status" id="status-${d}">En attente</span>
+          </div>`).join("")}
+      </div>`;
+
+    let totalNet = 0, totalParis = 0;
+    for (const day of days) {
+      $(`fill-${day}`).className = "d-fill running";
+      $(`status-${day}`).textContent = "En cours…";
+      setStatus(`Traitement du ${new Date(day+"T00:00:00").toLocaleDateString("fr-FR")}…`);
+      try {
+        await runPipeline(day);
+        await runAnalysis(day);
+        const pnl = await runPnl(day);
+        if (pnl) { totalNet += parseFloat(pnl.resultat_net_total || 0); totalParis += parseInt(pnl.nb_paris || 0); }
+        $(`fill-${day}`).className = "d-fill done";
+        $(`status-${day}`).textContent = pnl ? `${pnl.resultat_net_total} €` : "OK";
+        $(`status-${day}`).style.color = "var(--green)";
+      } catch {
+        $(`fill-${day}`).className = "d-fill error";
+        $(`status-${day}`).textContent = "Erreur";
+        $(`status-${day}`).style.color = "var(--red)";
+      }
+    }
+
+    setStatus(`Plage terminée — ${totalParis} paris, résultat net total : ${totalNet.toFixed(2)} €`);
+    setResultState("Batch terminé", "ok");
+    lockBtns(false);
+  }
+
+  document.addEventListener("click", event => {
+    const filterBtn = event.target.closest("[data-course-filter]");
+    if (filterBtn) {
+      currentCourseFilter = filterBtn.getAttribute("data-course-filter");
+      renderAnalysisDashboard();
+      return;
+    }
+    const toggleBtn = event.target.closest("[data-toggle-selected]");
+    if (toggleBtn) {
+      fullSelectionListOpen = !fullSelectionListOpen;
+      renderAnalysisDashboard();
+    }
+  });
+
+  renderSystemState();
+  renderJournal();
+  renderSummaryCards();
+  renderDashboardPlaceholder();
+</script>
+</body>
+</html>

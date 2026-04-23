@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Batch Import 2026</title>
+<style>
+  body { font-family: monospace; background:#0d1021; color:#cdd5f0; padding:20px; }
+  h2 { color:#fff; }
+  #log { background:#0a0c1a; border:1px solid #252d4a; padding:16px; height:70vh; overflow-y:auto; font-size:0.82rem; line-height:1.6; }
+  .ok   { color:#3ecf8e; }
+  .err  { color:#f56565; }
+  .skip { color:#5a6488; }
+  .day  { color:#6c8cff; font-weight:bold; margin-top:8px; }
+  .bar  { background:#252d4a; height:20px; border-radius:4px; margin:12px 0; }
+  .bar-fill { background:#6c8cff; height:20px; border-radius:4px; transition:width 0.3s; }
+  button { background:#6c8cff; color:#fff; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-size:1rem; margin-right:8px; }
+  button:disabled { opacity:0.4; cursor:not-allowed; }
+  .stats { display:flex; gap:24px; margin:12px 0; }
+  .stat  { background:#1c2136; padding:10px 18px; border-radius:8px; }
+  .stat span { display:block; font-size:1.4rem; font-weight:700; color:#fff; }
+  .stat small { color:#5a6488; font-size:0.75rem; }
+</style>
+</head>
+<body>
+<h2>🚀 Batch Import 2026</h2>
+
+<div style="margin-bottom:12px;">
+  <label>Du : <input type="date" id="dateStart" value="2026-01-01"></label>
+  &nbsp;
+  <label>Au : <input type="date" id="dateEnd" value="2026-04-16"></label>
+  &nbsp;
+  <label><input type="checkbox" id="chkForce"> Forcer réimport</label>
+</div>
+
+<button id="btnStart" onclick="startBatch()">▶ Lancer</button>
+<button id="btnStop" onclick="stopBatch()" disabled>⏹ Arrêter</button>
+
+<div class="bar"><div class="bar-fill" id="progress" style="width:0%"></div></div>
+
+<div class="stats">
+  <div class="stat"><span id="sDone">0</span><small>Traités</small></div>
+  <div class="stat"><span id="sSkip">0</span><small>Ignorés</small></div>
+  <div class="stat"><span id="sErr">0</span><small>Erreurs</small></div>
+  <div class="stat"><span id="sCur">—</span><small>En cours</small></div>
+</div>
+
+<div id="log"></div>
+
+<script>
+const BASE = 'http://localhost/pmu';
+let running = false;
+let stop = false;
+let done = 0, skip = 0, errs = 0;
+
+function log(msg, cls='') {
+  const d = document.getElementById('log');
+  d.innerHTML += `<div class="${cls}">${msg}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+function setProgress(cur, total) {
+  document.getElementById('progress').style.width = (cur/total*100).toFixed(1)+'%';
+  document.getElementById('sDone').textContent = done;
+  document.getElementById('sSkip').textContent = skip;
+  document.getElementById('sErr').textContent = errs;
+}
+
+async function callScript(script, params) {
+  const url = new URL(`${BASE}/${script}`);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  try {
+    const r = await fetch(url.toString());
+    const txt = await r.text();
+    try { return JSON.parse(txt); } catch { return {success: r.ok, message: txt.substring(0,100)}; }
+  } catch(e) {
+    return {success: false, message: e.message};
+  }
+}
+
+function toJJMMAAAA(isoDate) {
+  const [y,m,d] = isoDate.split('-');
+  return d+m+y;
+}
+
+function getDates(startIso, endIso) {
+  const dates = [];
+  let cur = new Date(startIso);
+  const end = new Date(endIso);
+  while (cur <= end) {
+    dates.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate()+1);
+  }
+  return dates;
+}
+
+async function processDate(isoDate, force) {
+  const date = toJJMMAAAA(isoDate);
+  const label = isoDate;
+
+  // 1. Vérifier si déjà importé (sauf force)
+  if (!force) {
+    const check = await callScript('list_dates.php', {mois: date.substring(2,4)+date.substring(4,8), table:'courses'});
+    if (check.dates && check.dates.includes(date)) {
+      log(`  ↷ ${label} déjà présent`, 'skip');
+      skip++;
+      return 'skip';
+    }
+  }
+
+  log(`<div class="day">📅 ${label}</div>`);
+
+  // Étape 1 : fetch
+  let r = await callScript('fetch_to_sqlite.php', {date});
+  if (!r.success) {
+    log(`  ✗ fetch: ${r.message || r.error || 'pas de courses'}`, 'err');
+    errs++;
+    return 'error';
+  }
+  log(`  ✓ fetch (${r.courses_importees||'?'} courses)`, 'ok');
+
+  // Étape 2 : repair
+  r = await callScript('repair_driver_jockey.php', {date, date_filter: date});
+  log(`  ${r.success ? '✓' : '✗'} repair_driver_jockey`, r.success ? 'ok' : 'err');
+
+  // Étape 3 : build JT
+  r = await callScript('build_jt_reference_from_base.php', {min_courses: 1});
+  log(`  ${r.success ? '✓' : '✗'} build_jt_reference`, r.success ? 'ok' : 'err');
+
+  // Étape 4 : cotes
+  r = await callScript('inject_market_odds_day_from_raw.php', {date});
+  log(`  ${r.success ? '✓' : '✗'} inject_market_odds`, r.success ? 'ok' : 'err');
+
+  // Étape 5 : moulinette
+  r = await callScript('build_moulinette_inputs.php', {date});
+  log(`  ${r.success ? '✓' : '✗'} build_moulinette_inputs`, r.success ? 'ok' : 'err');
+
+  done++;
+  return 'done';
+}
+
+async function startBatch() {
+  if (running) return;
+  running = true;
+  stop = false;
+  done = 0; skip = 0; errs = 0;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('log').innerHTML = '';
+
+  const startIso = document.getElementById('dateStart').value;
+  const endIso   = document.getElementById('dateEnd').value;
+  const force    = document.getElementById('chkForce').checked;
+  const dates    = getDates(startIso, endIso);
+  const total    = dates.length;
+
+  log(`=== Batch Import 2026 ===`);
+  log(`Période : ${startIso} → ${endIso} (${total} jours)`);
+  log(`Force : ${force ? 'OUI' : 'NON'}\n`);
+
+  for (let i = 0; i < dates.length; i++) {
+    if (stop) { log('\n⏹ Arrêté par l\'utilisateur', 'err'); break; }
+    document.getElementById('sCur').textContent = dates[i];
+    await processDate(dates[i], force);
+    setProgress(i+1, total);
+  }
+
+  log(`\n=== Terminé ===`);
+  log(`Traités: ${done} | Ignorés: ${skip} | Erreurs: ${errs}`);
+  document.getElementById('sCur').textContent = '✓ Terminé';
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  running = false;
+}
+
+function stopBatch() { stop = true; }
+</script>
+</body>
+</html>

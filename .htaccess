@@ -1,0 +1,14 @@
+Options -Indexes
+
+# Supprime la page d'avertissement ngrok (plan gratuit)
+Header always set ngrok-skip-browser-warning "true"
+
+# Desactive le cache navigateur/proxy pour eviter les JS/JSON perimes du dashboard.
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+  Header always set Pragma "no-cache"
+  Header always set Expires "0"
+  Header always unset ETag
+</IfModule>
+
+FileETag None
