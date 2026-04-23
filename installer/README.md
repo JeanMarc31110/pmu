@@ -6,6 +6,8 @@ Ce dossier contient l'installateur Windows du projet PMU.
 
 - `install-pmu.ps1` : installateur principal
 - `install-pmu.cmd` : lanceur Windows simple
+- `exe/Program.cs` : wrapper de lancement
+- `build-exe.ps1` : génération du binaire via `csc.exe`
 
 ## Usage
 
@@ -13,6 +15,12 @@ Depuis PowerShell :
 
 ```powershell
 .\installer\install-pmu.ps1
+```
+
+Pour générer l'exe :
+
+```powershell
+.\installer\build-exe.ps1
 ```
 
 Avec les données locales du poste courant :
