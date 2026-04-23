@@ -10,6 +10,8 @@ agent_state/
 outputs/
 tmp_*/
 debug_bundle_*/
+installer/out/
+release/
 
 # Local backups and scratch files
 *.bak
