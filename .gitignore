@@ -13,6 +13,12 @@ debug_bundle_*/
 
 # Local backups and scratch files
 *.bak
+*.bak_*
+*_old.html
+*_v2.html
+*_v3.html
+*_v3_1.html
+*_v3_pipeline_ok.html
 *.tmp
 *.swp
 
