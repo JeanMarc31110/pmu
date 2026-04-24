@@ -935,31 +935,26 @@
 
   function renderPnlTable(details) {
     const rows = Array.isArray(details) ? details : [];
-    const settledPlayed = rows.filter(d =>
+    const playedRows = rows.filter(d => d && d.selection);
+    const settledPlayed = playedRows.filter(d =>
       d &&
-      d.selection &&
       d.statut !== "RESULTAT_INCONNU" &&
       d.ordre_arrivee !== null &&
       d.ordre_arrivee !== ""
     );
-    const pendingPlayed = rows.filter(d =>
+    const pendingPlayed = playedRows.filter(d =>
       d &&
-      d.selection &&
       (d.statut === "RESULTAT_INCONNU" || d.ordre_arrivee === null || d.ordre_arrivee === "")
     );
 
-    if (!settledPlayed.length) {
+    if (!playedRows.length) {
       return `
       <div class="result-card">
         <div class="result-head">
           <div class="title">Bilan des gains du jour</div>
           <div class="pill warn">En attente</div>
         </div>
-        <div class="status">${
-          pendingPlayed.length
-            ? `Aucune course jouée n'est terminée pour le moment (${pendingPlayed.length} pari(s) en attente).`
-            : "Aucun pari joué terminé pour le moment."
-        }</div>
+        <div class="status">Aucun ticket D-10 joué n'est enregistré pour cette date.</div>
       </div>`;
     }
 
@@ -967,7 +962,7 @@
       <div class="result-card">
         <div class="result-head">
           <div class="title">Bilan des gains du jour</div>
-          <div class="pill ok">Courses jouées terminées</div>
+          <div class="pill ok">${settledPlayed.length}/${playedRows.length} résultat(s)</div>
         </div>
         <div class="table-wrap"><table>
           <thead><tr>
@@ -975,7 +970,7 @@
             <th>Mise</th><th>Ordre arrivée</th><th>Statut</th><th>Résultat net</th>
           </tr></thead>
           <tbody>
-            ${settledPlayed.map(d => `<tr>
+            ${playedRows.map(d => `<tr>
               <td>${d.reunion}</td><td>${d.course}</td><td>${d.heure_depart ?? "—"}</td><td>${d.libelle}</td>
               <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
               <td>${d.mise ?? 0} €</td><td>${d.ordre_arrivee ?? "—"}</td>
@@ -1423,12 +1418,14 @@
       $("summary").style.display = "grid";
       $("summary").innerHTML = `
         <div class="box"><div class="k">Bankroll départ</div><div class="v">${json.bankroll_depart ?? currentCapital} €</div></div>
-        <div class="box"><div class="k">Paris joués</div><div class="v">${json.nb_paris}</div></div>
+        <div class="box"><div class="k">Tickets D-10 joués</div><div class="v">${json.nb_paris_d10 ?? json.nb_paris}</div></div>
+        <div class="box"><div class="k">Résultats connus</div><div class="v">${json.nb_paris_resultat_connu ?? json.nb_paris}</div></div>
+        <div class="box"><div class="k">En attente</div><div class="v">${json.nb_paris_en_attente ?? 0}</div></div>
         <div class="box"><div class="k">Résultat net</div><div class="v" style="color:${parseFloat(json.resultat_net_total) >= 0 ? "var(--green)" : "var(--red)"}">${json.resultat_net_total} €</div></div>
         <div class="box"><div class="k">Bankroll fin</div><div class="v">${json.bankroll_fin_theorique} €</div></div>`;
       $("results").innerHTML = renderPnlTable(json.details || []);
       setResultState("Gains calculés", "ok");
-      setStatus(`Bilan terminé : ${json.nb_paris} pari(s), résultat net ${json.resultat_net_total} €.`);
+      setStatus(`Bilan terminé : ${json.nb_paris_resultat_connu ?? json.nb_paris}/${json.nb_paris_d10 ?? json.nb_paris} ticket(s) D-10 avec résultat connu, résultat net ${json.resultat_net_total} €.`);
       return json;
     } catch (err) {
       setResultState("Erreur gains", "no");
@@ -1462,13 +1459,14 @@
         $("summary").innerHTML = `
           <div class="box"><div class="k">Courses traitées</div><div class="v">${importJson.total_courses_processed ?? 0}</div></div>
           <div class="box"><div class="k">Résultats mis à jour</div><div class="v">${importJson.total_arrivees_inserted ?? 0}</div></div>
-          <div class="box"><div class="k">Paris terminés</div><div class="v">${pnlJson.nb_paris}</div></div>
+          <div class="box"><div class="k">Tickets D-10 joués</div><div class="v">${pnlJson.nb_paris_d10 ?? pnlJson.nb_paris}</div></div>
+          <div class="box"><div class="k">Résultats connus</div><div class="v">${pnlJson.nb_paris_resultat_connu ?? pnlJson.nb_paris}</div></div>
           <div class="box"><div class="k">Gains</div><div class="v" style="color:${parseFloat(pnlJson.resultat_net_total) >= 0 ? "var(--green)" : "var(--red)"}">${pnlJson.resultat_net_total} €</div></div>`;
         $("results").innerHTML = renderPnlTable(pnlJson.details || []);
       }
 
       setResultState("Résultats mis à jour", "ok");
-      setStatus(`Résultats mis à jour : ${importJson.total_arrivees_inserted ?? 0} résultat(s), ${pnlJson.nb_paris} pari(s) terminé(s), gains ${pnlJson.resultat_net_total} €.`);
+      setStatus(`Résultats mis à jour : ${importJson.total_arrivees_inserted ?? 0} résultat(s), ${pnlJson.nb_paris_resultat_connu ?? pnlJson.nb_paris}/${pnlJson.nb_paris_d10 ?? pnlJson.nb_paris} ticket(s) D-10 connus, gains ${pnlJson.resultat_net_total} €.`);
       return pnlJson;
     } catch (err) {
       setResultState("Erreur résultats", "no");

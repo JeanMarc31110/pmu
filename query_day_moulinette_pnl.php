@@ -464,6 +464,8 @@ try {
     $totalNet = 0.0;
     $nbParis = 0;
     $nbGagnants = 0;
+    $nbParisD10 = 0;
+    $nbParisEnAttente = 0;
     $normalizedDate = normalizeDateForLog((string)$date);
     $d10Snapshot = loadD10AnalysisSnapshot($normalizedDate);
 
@@ -513,6 +515,7 @@ try {
         // Le ticket joué est compté à 1 € par pari pour le bilan réel.
         // La Kelly reste un indicateur de préparation, pas la base du PnL.
         $mise = 1.0;
+        $nbParisD10++;
 
         $stmtParticipant->execute([
             ':date' => $course['date_course'],
@@ -551,6 +554,7 @@ try {
         } elseif ($ordreArrivee === null) {
             $resultatNet = 0.0;
             $statutPari = 'RESULTAT_INCONNU';
+            $nbParisEnAttente++;
         } else {
             $resultatNet = round(-$mise, 2);
             $statutPari = 'PERDU';
@@ -587,8 +591,12 @@ try {
         'date' => $date,
         'bankroll_depart' => $capital,
         'nb_paris' => $nbParis,
+        'nb_paris_d10' => $nbParisD10,
+        'nb_paris_resultat_connu' => $nbParis,
+        'nb_paris_en_attente' => $nbParisEnAttente,
         'nb_gagnants' => $nbGagnants,
         'total_mise' => round($totalMise, 2),
+        'total_mise_d10' => round($nbParisD10 * 1.0, 2),
         'resultat_net_total' => round($totalNet, 2),
         'bankroll_fin_theorique' => round($capital + $totalNet, 2),
         'details' => $details
