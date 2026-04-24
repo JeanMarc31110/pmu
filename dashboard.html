@@ -897,6 +897,10 @@
     return callScript("fetch_arrivees_to_sqlite.php", { date });
   }
 
+  async function captureD10Due(date) {
+    return callScript("capture_d10_due.php", { date });
+  }
+
   function renderImportResult(lines) {
     $("results").innerHTML = `
       <div class="result-card">
@@ -1246,6 +1250,7 @@
     }
 
     try {
+      await captureD10Due(toJJMMAAAA(iso));
       const json = await callScript("query_day_moulinette_summary.php", {
         date: toJJMMAAAA(iso),
         capital: currentCapital.toFixed(2),
