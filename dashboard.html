@@ -893,6 +893,10 @@
     return json;
   }
 
+  async function refreshArrivalsOnly(date) {
+    return callScript("fetch_arrivees_to_sqlite.php", { date });
+  }
+
   function renderImportResult(lines) {
     $("results").innerHTML = `
       <div class="result-card">
@@ -1354,6 +1358,9 @@
         ? data.filter(row => row.selection && isCourseStarted(iso, row)).length
         : Number(json.courses_jouees ?? selectionsValidees);
       const abstentions = data.filter(x => x.selection === null).length;
+      if (iso === isoToday()) {
+        await refreshArrivalsOnly(date);
+      }
       const pnlJson = await callScript("query_day_moulinette_pnl.php", { date, capital: currentCapital.toFixed(2) });
       const pnlDetails = Array.isArray(pnlJson.details) ? pnlJson.details : [];
       const netTotal = Number.parseFloat(pnlJson.resultat_net_total ?? 0);
@@ -1453,7 +1460,7 @@
     setResultState("Mise à jour résultats", "warn");
     try {
       setStatus("Mise à jour des résultats PMU sans relancer l'analyse D-10...");
-      const importJson = await callScript("fetch_arrivees_to_sqlite.php", { date });
+      const importJson = await refreshArrivalsOnly(date);
       const params = { date, capital: currentCapital.toFixed(2) };
       if (course) params.course = course;
       const pnlJson = await callScript("query_day_moulinette_pnl.php", params);
