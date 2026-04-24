@@ -1044,9 +1044,9 @@
               <td>${d.heure_depart ?? "—"}</td>
               <td>${d.reunion}${d.course}</td>
               <td>${d.libelle}</td>
-              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
+              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "À capturer D-10"}</td>
               <td>${d.mise ?? 0} €</td>
-              <td>${d.statut}</td>
+              <td>${d.selection ? d.statut : "PROGRAMMÉE"}</td>
             </tr>`).join("")}
         </tbody>
       </table></div>
@@ -1091,8 +1091,7 @@
   function buildCompletedPnlRows(details, iso) {
     const rows = Array.isArray(details) ? details : [];
     return rows.filter(row => {
-      const mins = minutesUntilDeparture(iso, row.heure_depart);
-      return row.ordre_arrivee !== null || (mins !== null && mins <= 0);
+      return row.ordre_arrivee !== null && row.ordre_arrivee !== undefined && row.ordre_arrivee !== "";
     });
   }
 
@@ -1131,6 +1130,21 @@
       const netTotal = Number.parseFloat(pnlJson.resultat_net_total ?? 0);
       gainsValue.textContent = `${netTotal.toFixed(2)} €`;
       gainsValue.style.color = netTotal >= 0 ? "#22e58c" : "#ff6060";
+    }
+
+    const ticketsValue = $("analysisTicketsD10Value");
+    if (ticketsValue) {
+      ticketsValue.textContent = Number(pnlJson.nb_paris_d10 ?? pnlJson.nb_paris ?? 0);
+    }
+
+    const knownValue = $("analysisResultsKnownValue");
+    if (knownValue) {
+      knownValue.textContent = Number(pnlJson.nb_paris_resultat_connu ?? pnlJson.nb_paris ?? 0);
+    }
+
+    const pendingValue = $("analysisPendingValue");
+    if (pendingValue) {
+      pendingValue.textContent = Number(pnlJson.nb_paris_en_attente ?? 0);
     }
   }
 
@@ -1440,6 +1454,7 @@
         : Number(json.courses_jouees ?? selectionsValidees);
       const abstentions = data.filter(x => x.selection === null).length;
       if (iso === isoToday()) {
+        await refreshD10Section();
         await refreshArrivalsOnly(date);
       }
       const pnlJson = await callScript("query_day_moulinette_pnl.php", { date, capital: currentCapital.toFixed(2) });
@@ -1455,15 +1470,14 @@
         <div class="box"><div class="k">Date</div><div class="v">${json.date}</div></div>
         <div class="box"><div class="k">Courses analysées</div><div class="v">${json.courses_count ?? 0}</div></div>
         <div class="box"><div class="k">Sélections validées</div><div class="v">${selectionsValidees}</div></div>
-        <div class="box"><div class="k">Tickets D-10 joués</div><div class="v">${ticketsD10}</div></div>
-        <div class="box"><div class="k">Résultats connus</div><div class="v">${resultatsConnus}</div></div>
-        <div class="box"><div class="k">En attente</div><div class="v">${resultatsEnAttente}</div></div>
+        <div class="box"><div class="k">Tickets D-10 joués</div><div class="v" id="analysisTicketsD10Value">${ticketsD10}</div></div>
+        <div class="box"><div class="k">Résultats connus</div><div class="v" id="analysisResultsKnownValue">${resultatsConnus}</div></div>
+        <div class="box"><div class="k">En attente</div><div class="v" id="analysisPendingValue">${resultatsEnAttente}</div></div>
         <div class="box"><div class="k">Sélections démarrées</div><div class="v">${selectionsDemarrees}</div></div>
         <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>
         <div class="box"><div class="k">Gains</div><div class="v" id="analysisGainsValue" style="color:${netColor}">${netTotal.toFixed(2)} €</div></div>`;
       $("results").innerHTML = "";
       if (iso === isoToday()) {
-        await refreshD10Section();
         const completedRows = buildCompletedPnlRows(pnlDetails, iso);
         const upcomingRows = buildUpcomingPnlRows(pnlDetails, iso);
         const displayData = applyD10SelectionsToAnalysisRows(data, pnlDetails);
