@@ -1,6 +1,6 @@
 # Méthode Q5 cote >= 2
 
-Date d'application : 26/04/2026.
+Date d'application : 25/04/2026.
 
 Règle de qualification :
 - Conserver uniquement les chevaux en `Q5`.

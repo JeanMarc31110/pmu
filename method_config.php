@@ -1,7 +1,7 @@
 <?php
 
-const PMU_EXPANDED_Q5_METHOD_START = '20260426';
-const PMU_EXPANDED_Q5_SOURCE_MODE = 'q5_cote_ge2_no_upper_limit_20260426';
+const PMU_EXPANDED_Q5_METHOD_START = '20260425';
+const PMU_EXPANDED_Q5_SOURCE_MODE = 'q5_cote_ge2_no_upper_limit_20260425';
 
 function pmu_date_to_ymd(string $date): ?string
 {
