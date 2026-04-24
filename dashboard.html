@@ -1324,6 +1324,10 @@
         ? data.filter(row => row.selection && isCourseStarted(iso, row)).length
         : Number(json.courses_jouees ?? selectionsValidees);
       const abstentions = data.filter(x => x.selection === null).length;
+      const pnlJson = await callScript("query_day_moulinette_pnl.php", { date, capital: currentCapital.toFixed(2) });
+      const pnlDetails = Array.isArray(pnlJson.details) ? pnlJson.details : [];
+      const netTotal = Number.parseFloat(pnlJson.resultat_net_total ?? 0);
+      const netColor = netTotal >= 0 ? "#22e58c" : "#ff6060";
       $("summary").style.display = "grid";
       $("summary").innerHTML = `
         <div class="box"><div class="k">Bankroll active</div><div class="v">${currentCapital} €</div></div>
@@ -1331,12 +1335,11 @@
         <div class="box"><div class="k">Courses analysées</div><div class="v">${json.courses_count ?? 0}</div></div>
         <div class="box"><div class="k">Sélections validées</div><div class="v">${selectionsValidees}</div></div>
         <div class="box"><div class="k">Courses jouées</div><div class="v">${jouees}</div></div>
-        <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>`;
+        <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>
+        <div class="box"><div class="k">Gains</div><div class="v" style="color:${netColor}">${netTotal.toFixed(2)} €</div></div>`;
       $("results").innerHTML = "";
       if (iso === isoToday()) {
         await refreshD10Section();
-        const pnlJson = await callScript("query_day_moulinette_pnl.php", { date, capital: currentCapital.toFixed(2) });
-        const pnlDetails = Array.isArray(pnlJson.details) ? pnlJson.details : [];
         const completedRows = (Array.isArray(pnlJson.details) ? pnlJson.details : [])
           .filter(row => {
             const mins = minutesUntilDeparture(iso, row.heure_depart);
