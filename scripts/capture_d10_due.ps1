@@ -1,9 +1,9 @@
 $ErrorActionPreference = "Stop"
 
 $date = Get-Date -Format "ddMMyyyy"
-$url = "http://localhost/pmu/capture_d10_due.php?date=$date"
+$url = "http://localhost/pmu/capture_d10_due_test.php?date=$date"
 $logDir = "C:\xampp\htdocs\pmu\data\logs"
-$logPath = Join-Path $logDir "capture_d10_due.log"
+$logPath = Join-Path $logDir "capture_d10_due_test.log"
 
 function Get-JsonValueOrZero($Object, [string]$Name) {
     if ($null -eq $Object) {
@@ -25,7 +25,7 @@ try {
     $content = $response.Content -replace "^[\uFEFF\s]+", ""
     $json = $content | ConvertFrom-Json
     if (-not $json.success) {
-        throw "capture_d10_due.php success=false"
+        throw "capture_d10_due_test.php success=false"
     }
     $line = "{0} OK date={1} due={2} saved={3} already={4} no_selection={5} errors={6}" -f `
         (Get-Date -Format "yyyy-MM-dd HH:mm:ss"),

@@ -9,6 +9,7 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 $dbPath = __DIR__ . '/data/pmu.sqlite';
+require_once __DIR__ . '/method_config.php';
 
 class MoulinettePMU2026PHP
 {
@@ -155,13 +156,9 @@ function extract_real_report_from_participant(?string $rawJson): ?float
     return null;
 }
 
-function derive_profil_from_cote(?float $cote): ?int
+function derive_profil_from_cote(?float $cote, bool $expandedMethod = false): ?int
 {
-    if ($cote === null) return null;
-    if ($cote >= 5.0 && $cote <= 8.0) return 1;
-    if ($cote >= 3.0 && $cote < 5.0) return 2;
-    if ($cote >= 2.0 && $cote < 3.0) return 3;
-    return null;
+    return pmu_profile_rank_from_cote($cote, $expandedMethod);
 }
 
 function fetch_live_course_reports(string $date, string $reunion, string $course): array
@@ -217,6 +214,7 @@ try {
     if (!$date) {
         throw new Exception("Paramètre requis : date");
     }
+    $expandedMethod = pmu_uses_expanded_q5_method((string)$date);
 
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -305,7 +303,7 @@ try {
                     continue;
                 }
                 $cote = (float)$cote;
-                $profil = derive_profil_from_cote($cote);
+                $profil = derive_profil_from_cote($cote, $expandedMethod);
                 if ($profil === null) {
                     continue;
                 }
@@ -362,6 +360,7 @@ try {
     json_response([
         'success' => true,
         'date' => $date,
+        'method' => $expandedMethod ? PMU_EXPANDED_Q5_SOURCE_MODE : 'strict_method_2026',
         'bankroll' => $moulinette->bankroll,
         'courses_count' => count($results),
         'courses_jouees' => $coursesJouees,
