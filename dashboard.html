@@ -1350,7 +1350,7 @@
       const json = await callScript("query_day_moulinette_summary.php", params);
       const data = Array.isArray(json.data) ? json.data : [];
       const selectionsValidees = data.filter(x => x.selection !== null).length;
-      const jouees = iso === isoToday()
+      const selectionsDemarrees = iso === isoToday()
         ? data.filter(row => row.selection && isCourseStarted(iso, row)).length
         : Number(json.courses_jouees ?? selectionsValidees);
       const abstentions = data.filter(x => x.selection === null).length;
@@ -1358,13 +1358,19 @@
       const pnlDetails = Array.isArray(pnlJson.details) ? pnlJson.details : [];
       const netTotal = Number.parseFloat(pnlJson.resultat_net_total ?? 0);
       const netColor = netTotal >= 0 ? "#22e58c" : "#ff6060";
+      const ticketsD10 = Number(pnlJson.nb_paris_d10 ?? 0);
+      const resultatsConnus = Number(pnlJson.nb_paris_resultat_connu ?? pnlJson.nb_paris ?? 0);
+      const resultatsEnAttente = Number(pnlJson.nb_paris_en_attente ?? 0);
       $("summary").style.display = "grid";
       $("summary").innerHTML = `
         <div class="box"><div class="k">Bankroll active</div><div class="v">${currentCapital} €</div></div>
         <div class="box"><div class="k">Date</div><div class="v">${json.date}</div></div>
         <div class="box"><div class="k">Courses analysées</div><div class="v">${json.courses_count ?? 0}</div></div>
         <div class="box"><div class="k">Sélections validées</div><div class="v">${selectionsValidees}</div></div>
-        <div class="box"><div class="k">Courses jouées</div><div class="v">${jouees}</div></div>
+        <div class="box"><div class="k">Tickets D-10 joués</div><div class="v">${ticketsD10}</div></div>
+        <div class="box"><div class="k">Résultats connus</div><div class="v">${resultatsConnus}</div></div>
+        <div class="box"><div class="k">En attente</div><div class="v">${resultatsEnAttente}</div></div>
+        <div class="box"><div class="k">Sélections démarrées</div><div class="v">${selectionsDemarrees}</div></div>
         <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>
         <div class="box"><div class="k">Gains</div><div class="v" id="analysisGainsValue" style="color:${netColor}">${netTotal.toFixed(2)} €</div></div>`;
       $("results").innerHTML = "";
@@ -1387,8 +1393,8 @@
       }
       setResultState("Analyse terminée", "ok");
       setStatus(iso === isoToday()
-        ? `Analyse terminée : bloc D-10 remonté pour la journée en cours.`
-        : `Analyse terminée : ${selectionsValidees} sélection(s) validée(s), ${jouees} course(s) jouée(s), ${abstentions} abstention(s).`);
+        ? `Analyse terminée : ${ticketsD10} ticket(s) D-10 sauvegardé(s), ${resultatsConnus} résultat(s) connu(s), ${resultatsEnAttente} en attente.`
+        : `Analyse terminée : ${selectionsValidees} sélection(s) validée(s), ${ticketsD10} ticket(s) D-10 sauvegardé(s), ${abstentions} abstention(s).`);
       return true;
     } catch (err) {
       setResultState("Erreur analyse", "no");
