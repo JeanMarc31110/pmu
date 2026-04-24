@@ -1089,6 +1089,35 @@
     }
   }
 
+  function applyD10SelectionsToAnalysisRows(rows, pnlDetails) {
+    const d10ByCourse = new Map();
+    (Array.isArray(pnlDetails) ? pnlDetails : []).forEach(detail => {
+      if (!detail || detail.selection_source !== "d10_analysis" || !detail.selection) {
+        return;
+      }
+      d10ByCourse.set(`${detail.reunion}${detail.course}`, detail);
+    });
+
+    return (Array.isArray(rows) ? rows : []).map(row => {
+      const d10 = d10ByCourse.get(`${row.reunion}${row.course}`);
+      if (!d10) {
+        return row;
+      }
+      return {
+        ...row,
+        selection: {
+          ...d10.selection,
+          cote_source: "d10_analysis",
+          mise: d10.mise ?? row.selection?.mise ?? 1,
+          mise_kelly: row.selection?.mise_kelly ?? d10.mise ?? 1,
+          valeur_handicap: d10.selection.valeur_handicap ?? row.selection?.valeur_handicap ?? null,
+        },
+        statut: row.statut,
+        selection_source: "d10_analysis",
+      };
+    });
+  }
+
   function renderAnalysisTabs({ d10Html, analysisHtml, allCoursesHtml, completedHtml, gainsHtml }) {
     return `
       <div class="analysis-tabs">
@@ -1389,8 +1418,9 @@
       if (iso === isoToday()) {
         await refreshD10Section();
         const completedRows = buildCompletedPnlRows(pnlDetails, iso);
-        const dayCards = data.length
-          ? data.map(item => renderSelectionCard(item)).join("")
+        const displayData = applyD10SelectionsToAnalysisRows(data, pnlDetails);
+        const dayCards = displayData.length
+          ? displayData.map(item => renderSelectionCard(item)).join("")
           : `<div class="result-card"><div class="result-head"><div class="title">Courses du jour</div><div class="pill warn">Aucune donnée</div></div><div class="status">Aucune course disponible pour la date sélectionnée.</div></div>`;
         $("results").innerHTML = renderAnalysisTabs({
           d10Html: $("d10Results").innerHTML,
