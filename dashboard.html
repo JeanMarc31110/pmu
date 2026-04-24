@@ -786,6 +786,7 @@
       const offset = parseInt(btn.dataset.offset, 10);
       btn.classList.toggle("active", addDays(today, offset) === iso);
     });
+    refreshD10Section();
   }
 
   function normalizeCourseId(raw) {
@@ -802,10 +803,14 @@
     $("bankrollInput").value = String(currentCapital);
     saveCapital(currentCapital);
     $("currentCapitalLabel").textContent = formatCapitalLabel(currentCapital);
+    refreshD10Section();
   });
   document.querySelectorAll(".quick-btn").forEach(btn => {
     btn.addEventListener("click", () => setDate(addDays(isoToday(), parseInt(btn.dataset.offset, 10))));
   });
+  refreshD10Section();
+  setInterval(refreshD10Section, 30000);
+
   $("multiToggle").addEventListener("change", e => {
     $("multiSection").classList.toggle("visible", e.target.checked);
   });
