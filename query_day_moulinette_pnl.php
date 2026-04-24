@@ -200,6 +200,30 @@ function extractCourseOrder(?string $rawJson): ?string
     return implode(' | ', $values);
 }
 
+function extractSelectedOrderFromCourseRaw(?string $rawJson, int $numPmu): ?int
+{
+    $raw = safeJsonDecode($rawJson);
+    if (!$raw) {
+        return null;
+    }
+
+    $order = $raw['ordreArrivee'] ?? $raw['ordre_arrivee'] ?? null;
+    if (!is_array($order) || empty($order)) {
+        return null;
+    }
+
+    foreach ($order as $index => $item) {
+        $values = is_array($item) ? $item : [$item];
+        foreach ($values as $value) {
+            if ((int)$value === $numPmu) {
+                return (int)$index + 1;
+            }
+        }
+    }
+
+    return null;
+}
+
 function fetchOfficialSimpleRapportFromApi(string $dateCourse, string $reunion, string $course, int $numPmu): ?float
 {
     $url = sprintf(
@@ -379,10 +403,15 @@ try {
             c.libelle,
             c.heure_depart,
             c.raw_json AS course_raw,
+            a.raw_json AS arrivee_raw,
             c.discipline,
             c.distance,
             c.statut
         FROM courses c
+        LEFT JOIN arrivees a
+          ON a.date_course = c.date_course
+         AND a.reunion = c.reunion
+         AND a.course = c.course
         WHERE c.date_course = :date
         " . ($reunionFilter ? " AND c.reunion = :reunion" : "") . "
         " . ($courseFilter ? " AND c.course = :course" : "") . "
@@ -455,19 +484,8 @@ try {
             ];
             $selectionSource = 'd10_analysis';
         }
-        $courseOrder = extractCourseOrder($course['course_raw'] ?? null);
-        if (!$choix && is_today_paris((string)$date) && $courseOrder !== null) {
-            $stmtInputs->execute([
-                ':date' => $course['date_course'],
-                ':reunion' => $course['reunion'],
-                ':course' => $course['course'],
-            ]);
-            $fallbackChoice = buildSelectionFromRows($stmtInputs->fetchAll(PDO::FETCH_ASSOC), $moulinette);
-            if ($fallbackChoice) {
-                $choix = $fallbackChoice;
-                $selectionSource = 'today_completed_fallback';
-            }
-        }
+        $resultRaw = $course['arrivee_raw'] ?? $course['course_raw'] ?? null;
+        $courseOrder = extractCourseOrder($resultRaw);
 
         // Convertir heure_depart (Unix ms) en heure Paris
         $heureLabel = null;
@@ -504,7 +522,10 @@ try {
         ]);
 
         $participant = $stmtParticipant->fetch(PDO::FETCH_ASSOC);
-        $ordreArrivee = $participant ? extractOrdreArrivee($participant['raw_json']) : null;
+        $ordreArrivee = extractSelectedOrderFromCourseRaw($resultRaw, (int)$choix['num']);
+        if ($ordreArrivee === null && $participant) {
+            $ordreArrivee = extractOrdreArrivee($participant['raw_json']);
+        }
 
         $resultatNet = 0.0;
         $statutPari = 'PERDU';

@@ -1450,7 +1450,7 @@
     setResultState("Mise à jour résultats", "warn");
     try {
       setStatus("Mise à jour des résultats PMU sans relancer l'analyse D-10...");
-      const importJson = await callScript("fetch_to_sqlite.php", { date });
+      const importJson = await callScript("fetch_arrivees_to_sqlite.php", { date });
       const params = { date, capital: currentCapital.toFixed(2) };
       if (course) params.course = course;
       const pnlJson = await callScript("query_day_moulinette_pnl.php", params);
@@ -1461,14 +1461,14 @@
         $("summary").style.display = "grid";
         $("summary").innerHTML = `
           <div class="box"><div class="k">Courses traitées</div><div class="v">${importJson.total_courses_processed ?? 0}</div></div>
-          <div class="box"><div class="k">Participants mis à jour</div><div class="v">${importJson.total_participants_inserted ?? 0}</div></div>
+          <div class="box"><div class="k">Résultats mis à jour</div><div class="v">${importJson.total_arrivees_inserted ?? 0}</div></div>
           <div class="box"><div class="k">Paris terminés</div><div class="v">${pnlJson.nb_paris}</div></div>
           <div class="box"><div class="k">Gains</div><div class="v" style="color:${parseFloat(pnlJson.resultat_net_total) >= 0 ? "var(--green)" : "var(--red)"}">${pnlJson.resultat_net_total} €</div></div>`;
         $("results").innerHTML = renderPnlTable(pnlJson.details || []);
       }
 
       setResultState("Résultats mis à jour", "ok");
-      setStatus(`Résultats mis à jour : ${importJson.total_courses_processed ?? 0} course(s), ${pnlJson.nb_paris} pari(s) terminé(s), gains ${pnlJson.resultat_net_total} €.`);
+      setStatus(`Résultats mis à jour : ${importJson.total_arrivees_inserted ?? 0} résultat(s), ${pnlJson.nb_paris} pari(s) terminé(s), gains ${pnlJson.resultat_net_total} €.`);
       return pnlJson;
     } catch (err) {
       setResultState("Erreur résultats", "no");
