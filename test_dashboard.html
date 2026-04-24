@@ -1,27 +1,332 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Test dashboard PMU</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Kelly PMU</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #0f1220;
+      color: #e8ecff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .card {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #171c31;
+      border: 1px solid #2a3155;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 12px 36px rgba(0,0,0,.25);
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #9ea8d9;
+      margin-bottom: 6px;
+    }
+    input, button {
+      border-radius: 10px;
+      border: 1px solid #38406a;
+      background: #0f1428;
+      color: #e8ecff;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #4b82ff, #2ecc71);
+      border: none;
+      font-weight: 700;
+    }
+    button.secondary {
+      background: #232946;
+      border: 1px solid #38406a;
+      font-weight: 600;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .stat {
+      background: #101529;
+      border: 1px solid #2a3155;
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .stat .k {
+      color: #9ea8d9;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .stat .v {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #2a3155;
+      vertical-align: top;
+      text-align: left;
+      font-size: 14px;
+    }
+    th {
+      color: #9ea8d9;
+      font-size: 12px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      background: #11162a;
+    }
+    tr:hover td {
+      background: #131a33;
+    }
+    .ok { color: #35d07f; }
+    .bad { color: #ff6b6b; }
+    .muted { color: #9ea8d9; }
+    .code {
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+    }
+    pre {
+      background: #0f1428;
+      border: 1px solid #2a3155;
+      border-radius: 12px;
+      padding: 14px;
+      overflow: auto;
+      max-height: 320px;
+    }
+  </style>
 </head>
-<body style="background:#111;color:#fff;font-family:Arial;padding:20px;">
-  <h1>Test Dashboard PMU</h1>
-  <button id="btn">Lancer analyse journée</button>
-  <pre id="out" style="white-space:pre-wrap;background:#222;padding:16px;border-radius:8px;"></pre>
+<body>
+  <div class="card">
+    <h1 style="margin-top:0">Test Kelly PMU</h1>
+    <p class="muted">
+      Cette page teste uniquement le calcul de mise Kelly. Elle ne modifie pas le dashboard de production.
+    </p>
+
+    <div class="row">
+      <div>
+        <label for="dateInput">Date</label>
+        <input id="dateInput" type="date" />
+      </div>
+      <div>
+        <label for="bankrollInput">Bankroll</label>
+        <input id="bankrollInput" type="number" min="1" step="1" value="100" />
+      </div>
+      <div>
+        <button id="loadBtn">Charger la journée</button>
+      </div>
+      <div>
+        <button id="pnlBtn" class="secondary">Calculer les gains</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Bankroll active</div><div class="v" id="capitalLabel">100 €</div></div>
+      <div class="stat"><div class="k">Paris joués</div><div class="v" id="betsLabel">—</div></div>
+      <div class="stat"><div class="k">Mise Kelly totale</div><div class="v" id="stakeLabel">—</div></div>
+      <div class="stat"><div class="k">Net total</div><div class="v" id="netLabel">—</div></div>
+    </div>
+
+    <h2 style="margin-bottom:8px">Sélections Kelly</h2>
+    <div id="summary" class="muted">Aucune analyse chargée.</div>
+    <div id="tableWrap"></div>
+
+    <h2 style="margin:18px 0 8px">Réponse brute</h2>
+    <pre id="raw">—</pre>
+  </div>
 
   <script>
-    document.getElementById('btn').addEventListener('click', async () => {
-      const out = document.getElementById('out');
-      out.textContent = 'Chargement...';
+    const $ = (id) => document.getElementById(id);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const dateInput = $("dateInput");
+    dateInput.value = todayIso;
+
+    function toJJMMAAAA(iso) {
+      const [y, m, d] = iso.split("-");
+      return `${d}${m}${y}`;
+    }
+
+    function formatCapital(v) {
+      const n = Number(v) || 0;
+      return `${Math.round(n)} €`;
+    }
+
+    function kellyTicket(row) {
+      if (!row || !row.selection) return "—";
+      const stake = pmuStake(row);
+      const cote = formatCote(row.selection.cote);
+      return `${row.reunion}${row.course} - N°${row.selection.num} ${row.selection.nom} - ${cote} - ${stake} €`;
+    }
+
+    function pmuStake(row) {
+      if (!row || !row.selection) return 0;
+      const rawStake = Number(row.selection.mise_kelly ?? 0);
+      return Math.max(1, Math.round(rawStake));
+    }
+
+    function formatCote(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "—";
+      return `${Math.round(n * 10) / 10}`.replace(".", ",");
+    }
+
+    function kellyNet(row, pnlRow) {
+      const stake = pmuStake(row);
+      if (!stake) {
+        return 0;
+      }
+      const baseNet = Number(pnlRow?.resultat_net ?? row?.resultat_net ?? 0);
+      return Math.round(baseNet * stake * 100) / 100;
+    }
+
+    async function callScript(script, params) {
+      const url = new URL(`http://localhost/pmu/${script}`);
+      Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
+      const res = await fetch(url);
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.message || "Erreur inconnue");
+      }
+      return json;
+    }
+
+    function rowKey(row) {
+      return `${row?.reunion ?? ""}-${row?.course ?? ""}`;
+    }
+
+    function renderTable(rows, pnlRows) {
+      const pnlMap = new Map((pnlRows || []).map((row) => [rowKey(row), row]));
+      const html = rows.map((row, index) => {
+        const sel = row.selection;
+        const ticket = sel ? kellyTicket(row) : "—";
+        const stake = sel ? pmuStake(row) : 0;
+        const pnlRow = pnlMap.get(rowKey(row)) ?? pnlRows?.[index];
+        const status = pnlRow?.statut || row.statut || "—";
+        const statusClass = status === "GAGNE" ? "ok" : (status === "PERDU" ? "bad" : "muted");
+        const net = kellyNet(row, pnlRow);
+        return `
+          <tr>
+            <td>${row.reunion ?? ""}</td>
+            <td>${row.course ?? ""}</td>
+            <td>${row.heure_depart ?? ""}</td>
+            <td>${row.libelle ?? ""}</td>
+            <td>${sel ? `${sel.num} - ${sel.nom}` : "Aucune"}</td>
+            <td>${sel ? formatCote(sel.cote) : "—"}</td>
+            <td>${stake} €</td>
+            <td class="${statusClass}">${status}</td>
+            <td>${net ?? 0} €</td>
+            <td class="code">${ticket}</td>
+          </tr>`;
+      }).join("");
+
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>Réunion</th>
+              <th>Course</th>
+              <th>Départ</th>
+              <th>Libellé</th>
+              <th>Sélection</th>
+              <th>Côte</th>
+              <th>Mise Kelly</th>
+              <th>Statut</th>
+              <th>Net</th>
+              <th>Ticket</th>
+            </tr>
+          </thead>
+          <tbody>${html}</tbody>
+        </table>`;
+    }
+
+    async function loadAnalysis() {
+      const capital = Number($("bankrollInput").value || 100);
+      $("capitalLabel").textContent = formatCapital(capital);
+      $("summary").textContent = "Chargement...";
+      $("raw").textContent = "—";
+      $("tableWrap").innerHTML = "";
 
       try {
-        const res = await fetch('http://localhost/pmu/query_day_moulinette_summary.php?date=15042026');
-        const json = await res.json();
-        out.textContent = JSON.stringify(json, null, 2);
-      } catch (e) {
-        out.textContent = 'Erreur : ' + e.message;
+        const json = await callScript("query_day_moulinette_summary.php", {
+          date: toJJMMAAAA(dateInput.value),
+          capital: String(capital.toFixed(2)),
+          live: "1"
+        });
+        const pnl = await callScript("query_day_moulinette_pnl.php", {
+          date: toJJMMAAAA(dateInput.value),
+          capital: String(capital.toFixed(2))
+        });
+
+        const rows = Array.isArray(json.data) ? json.data : [];
+        const pnlRows = Array.isArray(pnl.details) ? pnl.details : [];
+        $("betsLabel").textContent = String(json.courses_jouees ?? 0);
+        const stakeTotal = rows.reduce((sum, row) => sum + pmuStake(row), 0);
+        $("stakeLabel").textContent = `${Math.round(stakeTotal)} €`;
+        const netTotal = rows.reduce((sum, row, index) => {
+          const pnlRow = pnlRows[index] ?? pnlRows.find((r) => rowKey(r) === rowKey(row));
+          return sum + kellyNet(row, pnlRow);
+        }, 0);
+        $("netLabel").textContent = `${Math.round(netTotal * 100) / 100} €`;
+        $("summary").textContent = `Analyse chargée pour ${json.date}. Les mises affichées utilisent la valeur Kelly et le net provient du PnL.`;
+        $("tableWrap").innerHTML = renderTable(rows, pnlRows);
+        $("raw").textContent = JSON.stringify({ summary: json, pnl }, null, 2);
+      } catch (err) {
+        $("summary").textContent = `Erreur: ${err.message}`;
       }
+    }
+
+    async function loadPnl() {
+      const capital = Number($("bankrollInput").value || 100);
+      try {
+        const summary = await callScript("query_day_moulinette_summary.php", {
+          date: toJJMMAAAA(dateInput.value),
+          capital: String(capital.toFixed(2)),
+          live: "1"
+        });
+        const json = await callScript("query_day_moulinette_pnl.php", {
+          date: toJJMMAAAA(dateInput.value),
+          capital: String(capital.toFixed(2))
+        });
+        const rows = Array.isArray(summary.data) ? summary.data : [];
+        const pnlRows = Array.isArray(json.details) ? json.details : [];
+        const netTotal = rows.reduce((sum, row, index) => {
+          const pnlRow = pnlRows[index] ?? pnlRows.find((r) => rowKey(r) === rowKey(row));
+          return sum + kellyNet(row, pnlRow);
+        }, 0);
+        $("netLabel").textContent = `${Math.round(netTotal * 100) / 100} €`;
+        $("raw").textContent = JSON.stringify({ summary, pnl: json }, null, 2);
+      } catch (err) {
+        $("netLabel").textContent = "Erreur";
+        $("summary").textContent = `Erreur gains: ${err.message}`;
+      }
+    }
+
+    $("loadBtn").addEventListener("click", loadAnalysis);
+    $("pnlBtn").addEventListener("click", loadPnl);
+    $("bankrollInput").addEventListener("change", () => {
+      $("capitalLabel").textContent = formatCapital($("bankrollInput").value);
     });
+
+    loadAnalysis();
   </script>
 </body>
 </html>

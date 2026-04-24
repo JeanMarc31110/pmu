@@ -120,6 +120,86 @@ function extractSimpleRapport(?string $rawJson): ?float
     return null;
 }
 
+function deriveProfilFromCote(?float $cote): ?int
+{
+    if ($cote === null) {
+        return null;
+    }
+    if ($cote >= 5.0 && $cote <= 8.0) {
+        return 1;
+    }
+    if ($cote >= 3.0 && $cote < 5.0) {
+        return 2;
+    }
+    if ($cote >= 2.0 && $cote < 3.0) {
+        return 3;
+    }
+    return null;
+}
+
+function buildSelectionFromRows(array $rows, MoulinettePMU2026PHP $moulinette): ?array
+{
+    $qualifies = [];
+    foreach ($rows as $row) {
+        if ((int)($row['qualifie_final'] ?? 0) !== 1) {
+            continue;
+        }
+
+        $cote = extractSimpleRapport($row['participant_raw'] ?? null);
+        if (!is_numeric($cote)) {
+            continue;
+        }
+
+        $profil = deriveProfilFromCote((float)$cote);
+        if ($profil === null) {
+            continue;
+        }
+
+        $qualifies[] = [
+            'num' => (int)$row['num_pmu'],
+            'nom' => (string)($row['nom'] ?? ''),
+            'profil' => $profil,
+            'jt_score' => (float)($row['jt_score'] ?? 0),
+            'cote' => (float)$cote,
+            'valeur_handicap' => $row['valeur_handicap'] !== null ? (float)$row['valeur_handicap'] : null,
+        ];
+    }
+
+    return $moulinette->arbitrageSelection($qualifies);
+}
+
+function extractCourseOrder(?string $rawJson): ?string
+{
+    $raw = safeJsonDecode($rawJson);
+    if (!$raw) {
+        return null;
+    }
+
+    $order = $raw['ordreArrivee'] ?? $raw['ordre_arrivee'] ?? null;
+    if (!is_array($order) || empty($order)) {
+        return null;
+    }
+
+    $values = [];
+    foreach ($order as $item) {
+        if (is_array($item)) {
+            if (!empty($item)) {
+                $values[] = implode('-', array_map('strval', $item));
+            }
+            continue;
+        }
+        if ($item !== null && $item !== '') {
+            $values[] = (string)$item;
+        }
+    }
+
+    if (empty($values)) {
+        return null;
+    }
+
+    return implode(' | ', $values);
+}
+
 function fetchOfficialSimpleRapportFromApi(string $dateCourse, string $reunion, string $course, int $numPmu): ?float
 {
     $url = sprintf(
@@ -298,6 +378,7 @@ try {
             c.course,
             c.libelle,
             c.heure_depart,
+            c.raw_json AS course_raw,
             c.discipline,
             c.distance,
             c.statut
@@ -329,6 +410,26 @@ try {
         LIMIT 1
     ");
 
+    $stmtInputs = $pdo->prepare("
+        SELECT
+            mi.num_pmu,
+            mi.nom,
+            mi.jt_score,
+            mi.valeur_handicap,
+            mi.qualifie_final,
+            p.raw_json AS participant_raw
+        FROM moulinette_inputs mi
+        LEFT JOIN participants p
+          ON p.date_course = mi.date_course
+         AND p.reunion = mi.reunion
+         AND p.course = mi.course
+         AND p.num_pmu = mi.num_pmu
+        WHERE mi.date_course = :date
+          AND mi.reunion = :reunion
+          AND mi.course = :course
+        ORDER BY mi.num_pmu
+    ");
+
     $details = [];
     $totalMise = 0.0;
     $totalNet = 0.0;
@@ -354,6 +455,19 @@ try {
             ];
             $selectionSource = 'd10_analysis';
         }
+        $courseOrder = extractCourseOrder($course['course_raw'] ?? null);
+        if (!$choix && is_today_paris((string)$date) && $courseOrder !== null) {
+            $stmtInputs->execute([
+                ':date' => $course['date_course'],
+                ':reunion' => $course['reunion'],
+                ':course' => $course['course'],
+            ]);
+            $fallbackChoice = buildSelectionFromRows($stmtInputs->fetchAll(PDO::FETCH_ASSOC), $moulinette);
+            if ($fallbackChoice) {
+                $choix = $fallbackChoice;
+                $selectionSource = 'today_completed_fallback';
+            }
+        }
 
         // Convertir heure_depart (Unix ms) en heure Paris
         $heureLabel = null;
@@ -370,7 +484,7 @@ try {
                 'heure_depart'  => $heureLabel,
                 'selection'     => null,
                 'selection_source' => $selectionSource,
-                'ordre_arrivee' => null,
+                'ordre_arrivee' => $courseOrder,
                 'mise'          => 0,
                 'resultat_net'  => 0,
                 'statut'        => 'ABSTENTION'

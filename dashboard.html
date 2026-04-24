@@ -350,6 +350,30 @@
     .box .v { font-size: 1.28rem; font-weight: 800; color: #fff; }
 
     #results { display: flex; flex-direction: column; gap: 12px; }
+    .analysis-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 8px 0;
+    }
+    .analysis-tab-btn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+    .analysis-tab-btn.active {
+      border-color: rgba(62, 207, 142, 0.45);
+      background: rgba(62, 207, 142, 0.12);
+      color: #fff;
+    }
+    .analysis-tab-panel { display: none; }
+    .analysis-tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
 
     .live-card {
       background: var(--card);
@@ -679,6 +703,10 @@
     if (!dep) return null;
     return Math.floor((dep.getTime() - Date.now()) / 60000);
   }
+  function isCourseStarted(isoDate, row) {
+    const minutesLeft = minutesUntilDeparture(isoDate, row?.heure_depart);
+    return minutesLeft !== null && minutesLeft <= 0;
+  }
   function loadCapital() {
     const input = $("bankrollInput");
     const stored = window.localStorage.getItem(CAPITAL_STORAGE_KEY);
@@ -904,11 +932,40 @@
   }
 
   function renderPnlTable(details) {
+    const rows = Array.isArray(details) ? details : [];
+    const settledPlayed = rows.filter(d =>
+      d &&
+      d.selection &&
+      d.statut !== "RESULTAT_INCONNU" &&
+      d.ordre_arrivee !== null &&
+      d.ordre_arrivee !== ""
+    );
+    const pendingPlayed = rows.filter(d =>
+      d &&
+      d.selection &&
+      (d.statut === "RESULTAT_INCONNU" || d.ordre_arrivee === null || d.ordre_arrivee === "")
+    );
+
+    if (!settledPlayed.length) {
+      return `
+      <div class="result-card">
+        <div class="result-head">
+          <div class="title">Bilan des gains du jour</div>
+          <div class="pill warn">En attente</div>
+        </div>
+        <div class="status">${
+          pendingPlayed.length
+            ? `Aucune course jouée n'est terminée pour le moment (${pendingPlayed.length} pari(s) en attente).`
+            : "Aucun pari joué terminé pour le moment."
+        }</div>
+      </div>`;
+    }
+
     return `
       <div class="result-card">
         <div class="result-head">
           <div class="title">Bilan des gains du jour</div>
-          <div class="pill ok">Calculé</div>
+          <div class="pill ok">Courses jouées terminées</div>
         </div>
         <div class="table-wrap"><table>
           <thead><tr>
@@ -916,7 +973,7 @@
             <th>Mise</th><th>Ordre arrivée</th><th>Statut</th><th>Résultat net</th>
           </tr></thead>
           <tbody>
-            ${details.map(d => `<tr>
+            ${settledPlayed.map(d => `<tr>
               <td>${d.reunion}</td><td>${d.course}</td><td>${d.heure_depart ?? "—"}</td><td>${d.libelle}</td>
               <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
               <td>${d.mise ?? 0} €</td><td>${d.ordre_arrivee ?? "—"}</td>
@@ -925,7 +982,101 @@
             </tr>`).join("")}
           </tbody>
         </table></div>
-      </div>`;
+    </div>`;
+  }
+
+  function renderCompletedCoursesTable(details) {
+    if (!details || !details.length) {
+      return `<div class="result-card"><div class="result-head"><div class="title">Courses terminées</div><div class="pill warn">Aucune</div></div><div class="status">Aucune course terminée pour le moment.</div></div>`;
+    }
+    return `
+    <div class="result-card">
+      <div class="result-head">
+        <div class="title">Courses terminées</div>
+        <div class="pill ok">${details.length} course(s)</div>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Départ</th><th>Course</th><th>Sélection</th><th>Ordre arrivée</th><th>Statut</th><th>Résultat net</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${details.map(d => `
+            <tr>
+              <td>${d.heure_depart ?? "—"}</td>
+              <td>${d.reunion}${d.course}</td>
+              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
+              <td>${d.ordre_arrivee ?? "—"}</td>
+              <td>${d.statut}</td>
+              <td style="font-weight:700;color:${parseFloat(d.resultat_net) >= 0 ? "var(--green)" : "var(--red)"}">${d.resultat_net} €</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  function renderAllCoursesPnlTable(details) {
+    const rows = Array.isArray(details) ? details : [];
+    if (!rows.length) {
+      return `<div class="result-card"><div class="result-head"><div class="title">Toutes les courses du jour</div><div class="pill warn">Aucune</div></div><div class="status">Aucune donnée de gain disponible.</div></div>`;
+    }
+    return `
+    <div class="result-card">
+      <div class="result-head">
+        <div class="title">Toutes les courses du jour</div>
+        <div class="pill">${rows.length} course(s)</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead>
+          <tr>
+            <th>Départ</th><th>Course</th><th>Libellé</th><th>Sélection</th>
+            <th>Mise</th><th>Ordre arrivée</th><th>Statut</th><th>Résultat net</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(d => `
+            <tr>
+              <td>${d.heure_depart ?? "—"}</td>
+              <td>${d.reunion}${d.course}</td>
+              <td>${d.libelle}</td>
+              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
+              <td>${d.mise ?? 0} €</td>
+              <td>${d.ordre_arrivee ?? "—"}</td>
+              <td>${d.statut}</td>
+              <td style="font-weight:700;color:${parseFloat(d.resultat_net) >= 0 ? "var(--green)" : "var(--red)"}">${d.resultat_net} €</td>
+            </tr>`).join("")}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+
+  function renderAnalysisTabs({ d10Html, analysisHtml, allCoursesHtml, completedHtml, gainsHtml }) {
+    return `
+      <div class="analysis-tabs">
+        <button class="analysis-tab-btn active" type="button" data-tab-target="tab-analysis">Analyse</button>
+        <button class="analysis-tab-btn" type="button" data-tab-target="tab-all-courses">Toutes courses</button>
+        <button class="analysis-tab-btn" type="button" data-tab-target="tab-completed">Courses terminées</button>
+        <button class="analysis-tab-btn" type="button" data-tab-target="tab-gains">Gains</button>
+      </div>
+      <div id="tab-analysis" class="analysis-tab-panel active">
+        ${d10Html}
+        ${analysisHtml}
+      </div>
+      <div id="tab-all-courses" class="analysis-tab-panel">${allCoursesHtml}</div>
+      <div id="tab-completed" class="analysis-tab-panel">${completedHtml}</div>
+      <div id="tab-gains" class="analysis-tab-panel">${gainsHtml}</div>
+    `;
+  }
+
+  function bindAnalysisTabs() {
+    document.querySelectorAll(".analysis-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.dataset.tabTarget;
+        document.querySelectorAll(".analysis-tab-btn").forEach(item => item.classList.toggle("active", item === btn));
+        document.querySelectorAll(".analysis-tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === targetId));
+      });
+    });
   }
 
   function renderD10Card(rows, isoDate) {
@@ -1169,10 +1320,13 @@
       const json = await callScript("query_day_moulinette_summary.php", params);
       const data = Array.isArray(json.data) ? json.data : [];
       const selectionsValidees = data.filter(x => x.selection !== null).length;
-      const jouees = Number(json.courses_jouees ?? selectionsValidees);
-      const abstentions = data.length - jouees;
+      const jouees = iso === isoToday()
+        ? data.filter(row => row.selection && isCourseStarted(iso, row)).length
+        : Number(json.courses_jouees ?? selectionsValidees);
+      const abstentions = data.filter(x => x.selection === null).length;
       $("summary").style.display = "grid";
       $("summary").innerHTML = `
+        <div class="box"><div class="k">Bankroll active</div><div class="v">${currentCapital} €</div></div>
         <div class="box"><div class="k">Date</div><div class="v">${json.date}</div></div>
         <div class="box"><div class="k">Courses analysées</div><div class="v">${json.courses_count ?? 0}</div></div>
         <div class="box"><div class="k">Sélections validées</div><div class="v">${selectionsValidees}</div></div>
@@ -1181,7 +1335,24 @@
       $("results").innerHTML = "";
       if (iso === isoToday()) {
         await refreshD10Section();
-        $("results").innerHTML = $("d10Results").innerHTML;
+        const pnlJson = await callScript("query_day_moulinette_pnl.php", { date, capital: currentCapital.toFixed(2) });
+        const pnlDetails = Array.isArray(pnlJson.details) ? pnlJson.details : [];
+        const completedRows = (Array.isArray(pnlJson.details) ? pnlJson.details : [])
+          .filter(row => {
+            const mins = minutesUntilDeparture(iso, row.heure_depart);
+            return row.ordre_arrivee !== null || (mins !== null && mins <= 0);
+          });
+        const dayCards = data.length
+          ? data.map(item => renderSelectionCard(item)).join("")
+          : `<div class="result-card"><div class="result-head"><div class="title">Courses du jour</div><div class="pill warn">Aucune donnée</div></div><div class="status">Aucune course disponible pour la date sélectionnée.</div></div>`;
+        $("results").innerHTML = renderAnalysisTabs({
+          d10Html: $("d10Results").innerHTML,
+          analysisHtml: dayCards,
+          allCoursesHtml: renderAllCoursesPnlTable(pnlDetails),
+          completedHtml: renderCompletedCoursesTable(completedRows),
+          gainsHtml: renderPnlTable(pnlDetails),
+        });
+        bindAnalysisTabs();
       } else {
         data.forEach(item => $("results").insertAdjacentHTML("beforeend", renderSelectionCard(item)));
       }
