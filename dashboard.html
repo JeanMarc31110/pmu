@@ -266,6 +266,7 @@
     .btn-import  { background: linear-gradient(135deg, #3650d8, #5166f3); color: #fff; }
     .btn-analyse { background: linear-gradient(135deg, #20b26b, #3ecf8e); color: #052517; }
     .btn-gains   { background: linear-gradient(135deg, #f0a12a, #f6ad55); color: #3b2000; }
+    .btn-results { background: linear-gradient(135deg, #24a0b8, #47d5c7); color: #062526; }
     .btn-all     { background: linear-gradient(135deg, #3650d8, #3ecf8e); color: #fff; }
 
     .multi-toggle {
@@ -603,6 +604,7 @@
         <button class="action-btn btn-import"  id="btnImport"  onclick="runPipeline()">📥 Importer et préparer</button>
         <button class="action-btn btn-analyse" id="btnAnalyse" onclick="runAnalysis()">🔍 Lancer l'analyse D-10</button>
         <button class="action-btn btn-gains"   id="btnGains"   onclick="runPnl()">💰 Calculer les gains du jour</button>
+        <button class="action-btn btn-results" id="btnUpdateResults" onclick="updateResultsOnly()">🔄 Mettre à jour résultats</button>
       </div>
     </div>
 
@@ -847,14 +849,14 @@
   }
 
   function lockBtns(lock) {
-    ["btnAll", "btnImport", "btnAnalyse", "btnGains", "btnBatch", "btnSingleCourse"].forEach(id => {
+    ["btnAll", "btnImport", "btnAnalyse", "btnGains", "btnUpdateResults", "btnBatch", "btnSingleCourse"].forEach(id => {
       $(id).disabled = lock;
     });
   }
 
   function safeParseJson(text) {
     if (typeof text !== "string") return null;
-    const cleaned = text.replace(/^\uFEFF/, "").trim();
+    const cleaned = text.replace(/^[\uFEFF\s]+/, "").trim();
     try { return JSON.parse(cleaned); } catch {}
     const fb = cleaned.indexOf("{"), lb = cleaned.lastIndexOf("}");
     if (fb !== -1 && lb > fb) {
@@ -1049,6 +1051,39 @@
         </tbody>
       </table></div>
     </div>`;
+  }
+
+  function buildCompletedPnlRows(details, iso) {
+    const rows = Array.isArray(details) ? details : [];
+    return rows.filter(row => {
+      const mins = minutesUntilDeparture(iso, row.heure_depart);
+      return row.ordre_arrivee !== null || (mins !== null && mins <= 0);
+    });
+  }
+
+  function refreshPnlPanels(pnlJson, iso) {
+    const details = Array.isArray(pnlJson.details) ? pnlJson.details : [];
+    const completedRows = buildCompletedPnlRows(details, iso);
+    const allCoursesPanel = $("tab-all-courses");
+    const completedPanel = $("tab-completed");
+    const gainsPanel = $("tab-gains");
+
+    if (allCoursesPanel) {
+      allCoursesPanel.innerHTML = renderAllCoursesPnlTable(details);
+    }
+    if (completedPanel) {
+      completedPanel.innerHTML = renderCompletedCoursesTable(completedRows);
+    }
+    if (gainsPanel) {
+      gainsPanel.innerHTML = renderPnlTable(details);
+    }
+
+    const gainsValue = $("analysisGainsValue");
+    if (gainsValue) {
+      const netTotal = Number.parseFloat(pnlJson.resultat_net_total ?? 0);
+      gainsValue.textContent = `${netTotal.toFixed(2)} €`;
+      gainsValue.style.color = netTotal >= 0 ? "#22e58c" : "#ff6060";
+    }
   }
 
   function renderAnalysisTabs({ d10Html, analysisHtml, allCoursesHtml, completedHtml, gainsHtml }) {
@@ -1336,15 +1371,11 @@
         <div class="box"><div class="k">Sélections validées</div><div class="v">${selectionsValidees}</div></div>
         <div class="box"><div class="k">Courses jouées</div><div class="v">${jouees}</div></div>
         <div class="box"><div class="k">Abstentions</div><div class="v">${abstentions}</div></div>
-        <div class="box"><div class="k">Gains</div><div class="v" style="color:${netColor}">${netTotal.toFixed(2)} €</div></div>`;
+        <div class="box"><div class="k">Gains</div><div class="v" id="analysisGainsValue" style="color:${netColor}">${netTotal.toFixed(2)} €</div></div>`;
       $("results").innerHTML = "";
       if (iso === isoToday()) {
         await refreshD10Section();
-        const completedRows = (Array.isArray(pnlJson.details) ? pnlJson.details : [])
-          .filter(row => {
-            const mins = minutesUntilDeparture(iso, row.heure_depart);
-            return row.ordre_arrivee !== null || (mins !== null && mins <= 0);
-          });
+        const completedRows = buildCompletedPnlRows(pnlDetails, iso);
         const dayCards = data.length
           ? data.map(item => renderSelectionCard(item)).join("")
           : `<div class="result-card"><div class="result-head"><div class="title">Courses du jour</div><div class="pill warn">Aucune donnée</div></div><div class="status">Aucune course disponible pour la date sélectionnée.</div></div>`;
@@ -1403,6 +1434,46 @@
       setResultState("Erreur gains", "no");
       setStatus(err.message, true);
       $("results").innerHTML = `<div class="result-card"><div class="result-head"><div class="title">Erreur gains</div><div class="pill no">Erreur</div></div><div class="status">${err.message}</div></div>`;
+      return null;
+    } finally {
+      if (!dateIso) lockBtns(false);
+    }
+  }
+
+  async function updateResultsOnly(dateIso = null) {
+    const iso = dateIso || currentIso;
+    const date = toJJMMAAAA(iso);
+    const course = normalizeCourseId($("courseId").value);
+    if (!dateIso) {
+      lockBtns(true);
+    }
+    setResultState("Mise à jour résultats", "warn");
+    try {
+      setStatus("Mise à jour des résultats PMU sans relancer l'analyse D-10...");
+      const importJson = await callScript("fetch_to_sqlite.php", { date });
+      const params = { date, capital: currentCapital.toFixed(2) };
+      if (course) params.course = course;
+      const pnlJson = await callScript("query_day_moulinette_pnl.php", params);
+
+      refreshPnlPanels(pnlJson, iso);
+
+      if (!$("tab-gains")) {
+        $("summary").style.display = "grid";
+        $("summary").innerHTML = `
+          <div class="box"><div class="k">Courses traitées</div><div class="v">${importJson.total_courses_processed ?? 0}</div></div>
+          <div class="box"><div class="k">Participants mis à jour</div><div class="v">${importJson.total_participants_inserted ?? 0}</div></div>
+          <div class="box"><div class="k">Paris terminés</div><div class="v">${pnlJson.nb_paris}</div></div>
+          <div class="box"><div class="k">Gains</div><div class="v" style="color:${parseFloat(pnlJson.resultat_net_total) >= 0 ? "var(--green)" : "var(--red)"}">${pnlJson.resultat_net_total} €</div></div>`;
+        $("results").innerHTML = renderPnlTable(pnlJson.details || []);
+      }
+
+      setResultState("Résultats mis à jour", "ok");
+      setStatus(`Résultats mis à jour : ${importJson.total_courses_processed ?? 0} course(s), ${pnlJson.nb_paris} pari(s) terminé(s), gains ${pnlJson.resultat_net_total} €.`);
+      return pnlJson;
+    } catch (err) {
+      setResultState("Erreur résultats", "no");
+      setStatus(err.message, true);
+      $("results").insertAdjacentHTML("afterbegin", `<div class="result-card"><div class="result-head"><div class="title">Erreur mise à jour résultats</div><div class="pill no">Erreur</div></div><div class="status">${err.message}</div></div>`);
       return null;
     } finally {
       if (!dateIso) lockBtns(false);
