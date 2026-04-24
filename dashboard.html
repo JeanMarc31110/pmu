@@ -1021,6 +1021,38 @@
     </div>`;
   }
 
+  function renderUpcomingCoursesTable(details) {
+    const rows = Array.isArray(details) ? details : [];
+    if (!rows.length) {
+      return `<div class="result-card"><div class="result-head"><div class="title">Courses à venir</div><div class="pill warn">Aucune</div></div><div class="status">Aucune course à venir pour le moment.</div></div>`;
+    }
+    return `
+    <div class="result-card">
+      <div class="result-head">
+        <div class="title">Courses à venir</div>
+        <div class="pill">${rows.length} course(s)</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead>
+          <tr>
+            <th>Départ</th><th>Course</th><th>Libellé</th><th>Sélection D-10</th><th>Mise</th><th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(d => `
+            <tr>
+              <td>${d.heure_depart ?? "—"}</td>
+              <td>${d.reunion}${d.course}</td>
+              <td>${d.libelle}</td>
+              <td>${d.selection ? `${d.selection.num} - ${d.selection.nom}` : "Aucune"}</td>
+              <td>${d.mise ?? 0} €</td>
+              <td>${d.statut}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+
   function renderAllCoursesPnlTable(details) {
     const rows = Array.isArray(details) ? details : [];
     if (!rows.length) {
@@ -1064,15 +1096,28 @@
     });
   }
 
+  function buildUpcomingPnlRows(details, iso) {
+    const rows = Array.isArray(details) ? details : [];
+    return rows.filter(row => {
+      const mins = minutesUntilDeparture(iso, row.heure_depart);
+      return row.ordre_arrivee === null && (mins === null || mins > 0);
+    });
+  }
+
   function refreshPnlPanels(pnlJson, iso) {
     const details = Array.isArray(pnlJson.details) ? pnlJson.details : [];
     const completedRows = buildCompletedPnlRows(details, iso);
+    const upcomingRows = buildUpcomingPnlRows(details, iso);
     const allCoursesPanel = $("tab-all-courses");
+    const upcomingPanel = $("tab-upcoming");
     const completedPanel = $("tab-completed");
     const gainsPanel = $("tab-gains");
 
     if (allCoursesPanel) {
       allCoursesPanel.innerHTML = renderAllCoursesPnlTable(details);
+    }
+    if (upcomingPanel) {
+      upcomingPanel.innerHTML = renderUpcomingCoursesTable(upcomingRows);
     }
     if (completedPanel) {
       completedPanel.innerHTML = renderCompletedCoursesTable(completedRows);
@@ -1118,11 +1163,12 @@
     });
   }
 
-  function renderAnalysisTabs({ d10Html, analysisHtml, allCoursesHtml, completedHtml, gainsHtml }) {
+  function renderAnalysisTabs({ d10Html, analysisHtml, allCoursesHtml, upcomingHtml, completedHtml, gainsHtml }) {
     return `
       <div class="analysis-tabs">
         <button class="analysis-tab-btn active" type="button" data-tab-target="tab-analysis">Analyse</button>
         <button class="analysis-tab-btn" type="button" data-tab-target="tab-all-courses">Toutes courses</button>
+        <button class="analysis-tab-btn" type="button" data-tab-target="tab-upcoming">Courses à venir</button>
         <button class="analysis-tab-btn" type="button" data-tab-target="tab-completed">Courses terminées</button>
         <button class="analysis-tab-btn" type="button" data-tab-target="tab-gains">Gains</button>
       </div>
@@ -1131,6 +1177,7 @@
         ${analysisHtml}
       </div>
       <div id="tab-all-courses" class="analysis-tab-panel">${allCoursesHtml}</div>
+      <div id="tab-upcoming" class="analysis-tab-panel">${upcomingHtml}</div>
       <div id="tab-completed" class="analysis-tab-panel">${completedHtml}</div>
       <div id="tab-gains" class="analysis-tab-panel">${gainsHtml}</div>
     `;
@@ -1418,6 +1465,7 @@
       if (iso === isoToday()) {
         await refreshD10Section();
         const completedRows = buildCompletedPnlRows(pnlDetails, iso);
+        const upcomingRows = buildUpcomingPnlRows(pnlDetails, iso);
         const displayData = applyD10SelectionsToAnalysisRows(data, pnlDetails);
         const dayCards = displayData.length
           ? displayData.map(item => renderSelectionCard(item)).join("")
@@ -1426,6 +1474,7 @@
           d10Html: $("d10Results").innerHTML,
           analysisHtml: dayCards,
           allCoursesHtml: renderAllCoursesPnlTable(pnlDetails),
+          upcomingHtml: renderUpcomingCoursesTable(upcomingRows),
           completedHtml: renderCompletedCoursesTable(completedRows),
           gainsHtml: renderPnlTable(pnlDetails),
         });
