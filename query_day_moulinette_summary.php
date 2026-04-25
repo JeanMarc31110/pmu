@@ -156,6 +156,16 @@ function extract_real_report_from_participant(?string $rawJson): ?float
     return null;
 }
 
+function course_arrival_known(?string $rawJson): bool
+{
+    $raw = parse_json_array($rawJson);
+    if (!$raw) {
+        return false;
+    }
+    $order = $raw['ordreArrivee'] ?? $raw['ordre_arrivee'] ?? null;
+    return is_array($order) && !empty($order);
+}
+
 function derive_profil_from_cote(?float $cote, bool $expandedMethod = false): ?int
 {
     return pmu_profile_rank_from_cote($cote, $expandedMethod);
@@ -231,12 +241,17 @@ try {
             c.heure_depart,
             c.discipline,
             c.distance,
-            c.statut
+            c.statut,
+            a.raw_json AS arrivee_raw
         FROM moulinette_inputs mi
         LEFT JOIN courses c
           ON c.date_course = mi.date_course
          AND c.reunion = mi.reunion
          AND c.course = mi.course
+        LEFT JOIN arrivees a
+          ON a.date_course = mi.date_course
+         AND a.reunion = mi.reunion
+         AND a.course = mi.course
         WHERE mi.date_course = :date
         " . ($reunionFilter ? " AND mi.reunion = :reunion" : "") . "
         " . ($courseFilter ? " AND mi.course = :course" : "") . "
@@ -348,6 +363,7 @@ try {
             'discipline' => $course['discipline'],
             'distance' => $course['distance'],
             'statut' => $course['statut'],
+            'arrivee_connue' => course_arrival_known($course['arrivee_raw'] ?? null),
             'candidats_eligibles_count' => count($qualifies),
             'selection' => $choix ? [
                 'num' => $choix['num'],

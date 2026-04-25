@@ -709,6 +709,14 @@
     const minutesLeft = minutesUntilDeparture(isoDate, row?.heure_depart);
     return minutesLeft !== null && minutesLeft <= 0;
   }
+  function isCourseFinished(row) {
+    if (!row) return false;
+    if (row.arrivee_connue === true || row.arrivee_connue === 1 || row.arrivee_connue === "1") {
+      return true;
+    }
+    const status = String(row.statut || "").toUpperCase();
+    return status.includes("ARRIV") || status.includes("FIN_COURSE") || status.includes("TERMINE");
+  }
   function loadCapital() {
     const input = $("bankrollInput");
     const stored = window.localStorage.getItem(CAPITAL_STORAGE_KEY);
@@ -1350,7 +1358,7 @@
           ...row,
           minutes_left: minutesUntilDeparture(iso, row.heure_depart),
         }))
-        .filter(row => row.minutes_left !== null && row.minutes_left >= 0 && row.minutes_left <= ANALYSIS_WINDOW_MINUTES)
+        .filter(row => !isCourseFinished(row) && row.minutes_left !== null && row.minutes_left >= 0 && row.minutes_left <= ANALYSIS_WINDOW_MINUTES)
         .sort((a, b) => a.minutes_left - b.minutes_left);
       const recalculatedRows = await recalculateD10Tickets(liveRows, iso);
       $("d10Results").innerHTML = renderD10Card(recalculatedRows, iso);

@@ -50,6 +50,16 @@ function fetch_json_url(string $url): ?array
     return safe_json_decode($raw);
 }
 
+function course_arrival_known(?string $rawJson): bool
+{
+    $raw = safe_json_decode($rawJson);
+    if (!$raw) {
+        return false;
+    }
+    $order = $raw['ordreArrivee'] ?? $raw['ordre_arrivee'] ?? null;
+    return is_array($order) && !empty($order);
+}
+
 try {
     $date = normalize_date((string)($_GET['date'] ?? (new DateTime('now', new DateTimeZone('Europe/Paris')))->format('dmY')));
     if (!$date) {
@@ -82,13 +92,17 @@ try {
 
     $now = new DateTime('now', new DateTimeZone('Europe/Paris'));
     $stmt = $pdo->prepare("
-        SELECT date_course, reunion, course, libelle, heure_depart
-        FROM courses
-        WHERE date_course = :date
-          AND heure_depart IS NOT NULL
-          " . ($reunionFilter !== null ? "AND UPPER(reunion) = :reunion" : "") . "
-          " . ($courseFilter !== null ? "AND UPPER(course) = :course" : "") . "
-        ORDER BY CAST(heure_depart AS INTEGER), reunion, course
+        SELECT c.date_course, c.reunion, c.course, c.libelle, c.heure_depart, a.raw_json AS arrivee_raw
+        FROM courses c
+        LEFT JOIN arrivees a
+          ON a.date_course = c.date_course
+         AND a.reunion = c.reunion
+         AND a.course = c.course
+        WHERE c.date_course = :date
+          AND c.heure_depart IS NOT NULL
+          " . ($reunionFilter !== null ? "AND UPPER(c.reunion) = :reunion" : "") . "
+          " . ($courseFilter !== null ? "AND UPPER(c.course) = :course" : "") . "
+        ORDER BY CAST(c.heure_depart AS INTEGER), c.reunion, c.course
     ");
     $courseParams = [':date' => $date];
     if ($reunionFilter !== null) {
@@ -121,10 +135,15 @@ try {
     $dueCount = 0;
     $saved = 0;
     $alreadyPresent = 0;
+    $alreadyArrived = 0;
     $withoutSelection = 0;
     $errors = [];
 
     foreach ($courses as $course) {
+        if (course_arrival_known($course['arrivee_raw'] ?? null)) {
+            $alreadyArrived++;
+            continue;
+        }
         $depart = (new DateTime('@' . intdiv((int)$course['heure_depart'], 1000)))->setTimezone(new DateTimeZone('Europe/Paris'));
         $minutesLeft = (int)floor(($depart->getTimestamp() - $now->getTimestamp()) / 60);
         if ($minutesLeft < -5 || $minutesLeft > 10) {
@@ -186,6 +205,7 @@ try {
         'due_count' => $dueCount,
         'saved' => $saved,
         'already_present' => $alreadyPresent,
+        'already_arrived' => $alreadyArrived,
         'without_selection' => $withoutSelection,
         'errors_count' => count($errors),
         'errors' => $errors,
