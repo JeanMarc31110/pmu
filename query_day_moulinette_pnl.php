@@ -300,6 +300,54 @@ function normalizeDateForLog(string $date): string
     return $date;
 }
 
+function ensureD10TicketsTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS d10_test_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date_course TEXT NOT NULL,
+            reunion TEXT NOT NULL,
+            course TEXT NOT NULL,
+            heure_depart INTEGER,
+            selection_json TEXT,
+            ticket TEXT,
+            source TEXT NOT NULL,
+            captured_at TEXT NOT NULL,
+            UNIQUE(date_course, reunion, course)
+        )
+    ");
+}
+
+function loadD10DbTickets(PDO $pdo, string $date): array
+{
+    ensureD10TicketsTable($pdo);
+
+    $stmt = $pdo->prepare("
+        SELECT date_course, reunion, course, selection_json, source, captured_at
+        FROM d10_test_tickets
+        WHERE date_course = :date
+    ");
+    $stmt->execute([':date' => $date]);
+
+    $tickets = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $selection = safeJsonDecode($row['selection_json'] ?? null);
+        if (!is_array($selection) || !isset($selection['num'])) {
+            continue;
+        }
+
+        $courseDateKey = normalizeDateForLog((string)$row['date_course']);
+        $courseId = $courseDateKey . '_' . $row['reunion'] . '_' . $row['course'];
+        $tickets[$courseId] = [
+            'selection' => $selection,
+            'source' => (string)($row['source'] ?? 'd10_test_tickets'),
+            'captured_at' => $row['captured_at'] ?? null,
+        ];
+    }
+
+    return $tickets;
+}
+
 function json_response(array $payload): void
 {
     while (ob_get_level() > 0) {
@@ -455,8 +503,11 @@ try {
     $nbParis = 0;
     $nbGagnants = 0;
     $nbParisD10 = 0;
+    $nbParisD10Db = 0;
+    $nbParisD10Snapshot = 0;
     $nbParisEnAttente = 0;
     $normalizedDate = normalizeDateForLog((string)$date);
+    $d10DbTickets = loadD10DbTickets($pdo, (string)$date);
     $d10Snapshot = loadD10AnalysisSnapshot($normalizedDate);
 
     foreach ($courses as $course) {
@@ -464,17 +515,21 @@ try {
         $courseId = $courseDateKey . '_' . $course['reunion'] . '_' . $course['course'];
         $choix = null;
         $selectionSource = 'ABSTENTION';
-        $snapshotCourse = $d10Snapshot[$courseId] ?? null;
-        $snapshotSelection = is_array($snapshotCourse) ? ($snapshotCourse['selection'] ?? null) : null;
-        if (is_array($snapshotSelection) && isset($snapshotSelection['num'])) {
+        $d10TicketCourse = $d10DbTickets[$courseId] ?? ($d10Snapshot[$courseId] ?? null);
+        $d10Selection = is_array($d10TicketCourse) ? ($d10TicketCourse['selection'] ?? null) : null;
+        $isDbD10Ticket = isset($d10DbTickets[$courseId]);
+        if (is_array($d10Selection) && isset($d10Selection['num'])) {
             $choix = [
-                'num' => (int)$snapshotSelection['num'],
-                'nom' => (string)($snapshotSelection['nom'] ?? ''),
-                'profil' => $snapshotSelection['profil'] ?? null,
-                'jt_score' => $snapshotSelection['jt_score'] ?? null,
-                'cote' => $snapshotSelection['cote'] ?? null
+                'num' => (int)$d10Selection['num'],
+                'nom' => (string)($d10Selection['nom'] ?? ''),
+                'profil' => $d10Selection['profil'] ?? null,
+                'jt_score' => $d10Selection['jt_score'] ?? null,
+                'cheval_score' => $d10Selection['cheval_score'] ?? null,
+                'jockey_score' => $d10Selection['jockey_score'] ?? null,
+                'entraineur_score' => $d10Selection['entraineur_score'] ?? null,
+                'cote' => $d10Selection['cote'] ?? null
             ];
-            $selectionSource = 'd10_analysis';
+            $selectionSource = $isDbD10Ticket ? 'd10_test_tickets' : 'd10_analysis_snapshot';
         }
         $resultRaw = $course['arrivee_raw'] ?? $course['course_raw'] ?? null;
         $courseOrder = extractCourseOrder($resultRaw);
@@ -506,6 +561,11 @@ try {
         // La Kelly reste un indicateur de préparation, pas la base du PnL.
         $mise = 1.0;
         $nbParisD10++;
+        if ($isDbD10Ticket) {
+            $nbParisD10Db++;
+        } else {
+            $nbParisD10Snapshot++;
+        }
 
         $stmtParticipant->execute([
             ':date' => $course['date_course'],
@@ -566,6 +626,9 @@ try {
                 'nom' => $choix['nom'],
                 'profil' => $choix['profil'],
                 'jt_score' => $choix['jt_score'],
+                'cheval_score' => $choix['cheval_score'] ?? null,
+                'jockey_score' => $choix['jockey_score'] ?? null,
+                'entraineur_score' => $choix['entraineur_score'] ?? null,
                 'cote' => $choix['cote']
             ],
             'selection_source' => $selectionSource,
@@ -583,6 +646,8 @@ try {
         'bankroll_depart' => $capital,
         'nb_paris' => $nbParis,
         'nb_paris_d10' => $nbParisD10,
+        'nb_paris_d10_db' => $nbParisD10Db,
+        'nb_paris_d10_snapshot' => $nbParisD10Snapshot,
         'nb_paris_resultat_connu' => $nbParis,
         'nb_paris_en_attente' => $nbParisEnAttente,
         'nb_gagnants' => $nbGagnants,

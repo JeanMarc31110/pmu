@@ -22,6 +22,9 @@ Mise de référence :
 Source des cotes :
 - À D-10, utiliser les cotes live au moment de l'exécution de la moulinette.
 - Le ticket D-10 doit être conservé tel quel après capture et ne doit pas être recalculé après la course.
+- À partir du 25/04/2026, le PnL réel lit en priorité les tickets D-10 enregistrés en base dans `d10_test_tickets`.
+- Les anciens snapshots JSON restent uniquement une compatibilité historique pour les dates précédentes.
+- Les cotes de départ utilisées pour combler des D-10 manquants restent un mode de test/backfill, pas une création de pari réel après course.
 
 Source des valeurs cheval/jockey/entraîneur :
 - Calculer les valeurs au jour de la course depuis l'historique `C:\Users\rigai\Desktop\pmu_data\pmu.db`.
@@ -36,4 +39,5 @@ Fichiers concernés :
 - `build_moulinette_inputs.php`
 - `query_day_moulinette_summary.php`
 - `capture_d10_due_test.php`
+- `query_day_moulinette_pnl.php`
 - `query_day_moulinette_pnl_test.php`
