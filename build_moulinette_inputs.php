@@ -94,6 +94,66 @@ function quintileLabelFromRank(int $index, int $total): string
     return 'Q1';
 }
 
+function newScoreBucket(string $name): array
+{
+    return [
+        'name' => $name,
+        'nb_courses' => 0,
+        'wins' => 0,
+        'places23' => 0,
+        'places45' => 0,
+    ];
+}
+
+function addArrivalToBucket(array &$bucket, ?int $ordre): void
+{
+    $bucket['nb_courses']++;
+
+    if ($ordre === 1) {
+        $bucket['wins']++;
+    } elseif ($ordre === 2 || $ordre === 3) {
+        $bucket['places23']++;
+    } elseif ($ordre === 4 || $ordre === 5) {
+        $bucket['places45']++;
+    }
+}
+
+function finalizeScoreReference(array $agg, int $minCourses = 3): array
+{
+    $items = array_values(array_filter($agg, function (array $row) use ($minCourses): bool {
+        return $row['nb_courses'] >= $minCourses;
+    }));
+
+    foreach ($items as &$item) {
+        $item['alpha_score'] = computeAlphaScore(
+            $item['nb_courses'],
+            $item['wins'],
+            $item['places23'],
+            $item['places45']
+        );
+    }
+    unset($item);
+
+    usort($items, function (array $a, array $b): int {
+        if ($a['alpha_score'] !== $b['alpha_score']) {
+            return $b['alpha_score'] <=> $a['alpha_score'];
+        }
+        return $b['nb_courses'] <=> $a['nb_courses'];
+    });
+
+    $reference = [];
+    $total = count($items);
+    foreach ($items as $index => $item) {
+        $reference[$item['name']] = [
+            'alpha_score' => $item['alpha_score'],
+            'quintile' => quintileLabelFromRank($index, $total),
+            'nb_courses' => $item['nb_courses'],
+        ];
+    }
+
+    return $reference;
+}
+
 function buildTemporalJtReference(string $historicalDbPath, string $date, int $minCourses = 3): array
 {
     if (!file_exists($historicalDbPath)) {
@@ -109,6 +169,7 @@ function buildTemporalJtReference(string $historicalDbPath, string $date, int $m
     $history->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $stmt = $history->prepare("
         SELECT
+            nom,
             COALESCE(NULLIF(TRIM(driver), ''), NULLIF(TRIM(jockey), '')) AS driver_jockey,
             entraineur,
             ordre_arrivee,
@@ -124,79 +185,80 @@ function buildTemporalJtReference(string $historicalDbPath, string $date, int $m
         ':target_date' => $targetIso,
     ]);
 
-    $agg = [];
+    $pairAgg = [];
+    $horseAgg = [];
+    $jockeyAgg = [];
+    $trainerAgg = [];
     $rowsScanned = 0;
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $rowsScanned++;
+        $horse = normalizeName($row['nom'] ?? null);
         $driver = normalizeName($row['driver_jockey'] ?? null);
         $entraineur = normalizeName($row['entraineur'] ?? null);
-
-        if ($driver === null || $entraineur === null) {
-            continue;
-        }
-
-        $key = $driver . '||' . $entraineur;
-        if (!isset($agg[$key])) {
-            $agg[$key] = [
-                'driver_jockey_norm' => $driver,
-                'entraineur_norm' => $entraineur,
-                'nb_courses' => 0,
-                'wins' => 0,
-                'places23' => 0,
-                'places45' => 0,
-            ];
-        }
-
-        $agg[$key]['nb_courses']++;
         $ordre = parseArrivalRank($row['ordre_arrivee'] ?? null) ?? parseArrivalRank($row['ordreArrivee'] ?? null);
 
-        if ($ordre === 1) {
-            $agg[$key]['wins']++;
-        } elseif ($ordre === 2 || $ordre === 3) {
-            $agg[$key]['places23']++;
-        } elseif ($ordre === 4 || $ordre === 5) {
-            $agg[$key]['places45']++;
+        if ($horse !== null) {
+            if (!isset($horseAgg[$horse])) {
+                $horseAgg[$horse] = newScoreBucket($horse);
+            }
+            addArrivalToBucket($horseAgg[$horse], $ordre);
+        }
+
+        if ($driver !== null) {
+            if (!isset($jockeyAgg[$driver])) {
+                $jockeyAgg[$driver] = newScoreBucket($driver);
+            }
+            addArrivalToBucket($jockeyAgg[$driver], $ordre);
+        }
+
+        if ($entraineur !== null) {
+            if (!isset($trainerAgg[$entraineur])) {
+                $trainerAgg[$entraineur] = newScoreBucket($entraineur);
+            }
+            addArrivalToBucket($trainerAgg[$entraineur], $ordre);
+        }
+
+        if ($driver !== null && $entraineur !== null) {
+            $key = $driver . '||' . $entraineur;
+            if (!isset($pairAgg[$key])) {
+                $pairAgg[$key] = newScoreBucket($key);
+            }
+            addArrivalToBucket($pairAgg[$key], $ordre);
         }
     }
 
-    $couples = array_values(array_filter($agg, function (array $row) use ($minCourses): bool {
-        return $row['nb_courses'] >= $minCourses;
-    }));
-
-    foreach ($couples as &$couple) {
-        $couple['alpha_score'] = computeAlphaScore(
-            $couple['nb_courses'],
-            $couple['wins'],
-            $couple['places23'],
-            $couple['places45']
-        );
-    }
-    unset($couple);
-
-    usort($couples, function (array $a, array $b): int {
-        if ($a['alpha_score'] !== $b['alpha_score']) {
-            return $b['alpha_score'] <=> $a['alpha_score'];
-        }
-        return $b['nb_courses'] <=> $a['nb_courses'];
-    });
-
-    $reference = [];
-    $total = count($couples);
-    foreach ($couples as $index => $couple) {
-        $reference[$couple['driver_jockey_norm'] . '||' . $couple['entraineur_norm']] = [
-            'alpha_score' => $couple['alpha_score'],
-            'quintile' => quintileLabelFromRank($index, $total),
-        ];
-    }
+    $pairReference = finalizeScoreReference($pairAgg, $minCourses);
+    $horseReference = finalizeScoreReference($horseAgg, $minCourses);
+    $jockeyReference = finalizeScoreReference($jockeyAgg, $minCourses);
+    $trainerReference = finalizeScoreReference($trainerAgg, $minCourses);
 
     return [
         'target_iso' => $targetIso,
         'history_start_iso' => PMU_HISTORY_START_ISO,
         'rows_scanned' => $rowsScanned,
-        'pairs_built' => count($reference),
-        'reference' => $reference,
+        'pairs_built' => count($pairReference),
+        'horses_built' => count($horseReference),
+        'jockeys_built' => count($jockeyReference),
+        'trainers_built' => count($trainerReference),
+        'reference' => $pairReference,
+        'horse_reference' => $horseReference,
+        'jockey_reference' => $jockeyReference,
+        'trainer_reference' => $trainerReference,
     ];
+}
+
+function ensureColumn(PDO $pdo, string $table, string $column, string $definition): void
+{
+    $stmt = $pdo->query("PRAGMA table_info(" . $table . ")");
+    $columns = array_map(
+        fn(array $row): string => (string)$row['name'],
+        $stmt->fetchAll(PDO::FETCH_ASSOC)
+    );
+
+    if (!in_array($column, $columns, true)) {
+        $pdo->exec("ALTER TABLE " . $table . " ADD COLUMN " . $column . " " . $definition);
+    }
 }
 
 function json_response(array $payload): void
@@ -279,6 +341,9 @@ try {
             UNIQUE(date_course, reunion, course, num_pmu)
         );
     ");
+    ensureColumn($pdo, 'moulinette_inputs', 'cheval_score', 'REAL');
+    ensureColumn($pdo, 'moulinette_inputs', 'jockey_score', 'REAL');
+    ensureColumn($pdo, 'moulinette_inputs', 'entraineur_score', 'REAL');
 
     $sql = "
         SELECT
@@ -327,11 +392,11 @@ try {
     $stmtUpsert = $pdo->prepare("
         INSERT INTO moulinette_inputs (
             date_course, reunion, course, num_pmu, nom, driver_jockey, entraineur,
-            alpha_score, quintile, profil, jt_score, cote_probable, valeur_handicap,
+            alpha_score, quintile, profil, jt_score, cheval_score, jockey_score, entraineur_score, cote_probable, valeur_handicap,
             qualifie_q5, qualifie_value, qualifie_profil, qualifie_final, source_mode, updated_at
         ) VALUES (
             :date_course, :reunion, :course, :num_pmu, :nom, :driver_jockey, :entraineur,
-            :alpha_score, :quintile, :profil, :jt_score, :cote_probable, :valeur_handicap,
+            :alpha_score, :quintile, :profil, :jt_score, :cheval_score, :jockey_score, :entraineur_score, :cote_probable, :valeur_handicap,
             :qualifie_q5, :qualifie_value, :qualifie_profil, :qualifie_final, :source_mode, CURRENT_TIMESTAMP
         )
         ON CONFLICT(date_course, reunion, course, num_pmu) DO UPDATE SET
@@ -342,6 +407,9 @@ try {
             quintile = excluded.quintile,
             profil = excluded.profil,
             jt_score = excluded.jt_score,
+            cheval_score = excluded.cheval_score,
+            jockey_score = excluded.jockey_score,
+            entraineur_score = excluded.entraineur_score,
             cote_probable = excluded.cote_probable,
             valeur_handicap = excluded.valeur_handicap,
             qualifie_q5 = excluded.qualifie_q5,
@@ -357,6 +425,9 @@ try {
         'participants_total' => 0,
         'non_partants_exclus' => 0,
         'jt_reference_missing' => 0,
+        'cheval_reference_missing' => 0,
+        'jockey_reference_missing' => 0,
+        'entraineur_reference_missing' => 0,
         'odds_missing' => 0,
         'qualifies_q5' => 0,
         'qualifies_value' => 0,
@@ -375,9 +446,46 @@ try {
 
         $driverNorm = normalizeName($p['driver_jockey']);
         $entraineurNorm = normalizeName($p['entraineur']);
+        $chevalNorm = normalizeName($p['nom']);
 
         $alphaScore = null;
         $quintile = null;
+        $chevalScore = null;
+        $jockeyScore = null;
+        $entraineurScore = null;
+
+        if ($chevalNorm !== null) {
+            $horse = $jtReference['horse_reference'][$chevalNorm] ?? null;
+            if ($horse) {
+                $chevalScore = parseNumeric($horse['alpha_score']);
+            } else {
+                $stats['cheval_reference_missing']++;
+            }
+        } else {
+            $stats['cheval_reference_missing']++;
+        }
+
+        if ($driverNorm !== null) {
+            $jockey = $jtReference['jockey_reference'][$driverNorm] ?? null;
+            if ($jockey) {
+                $jockeyScore = parseNumeric($jockey['alpha_score']);
+            } else {
+                $stats['jockey_reference_missing']++;
+            }
+        } else {
+            $stats['jockey_reference_missing']++;
+        }
+
+        if ($entraineurNorm !== null) {
+            $trainer = $jtReference['trainer_reference'][$entraineurNorm] ?? null;
+            if ($trainer) {
+                $entraineurScore = parseNumeric($trainer['alpha_score']);
+            } else {
+                $stats['entraineur_reference_missing']++;
+            }
+        } else {
+            $stats['entraineur_reference_missing']++;
+        }
 
         if ($driverNorm !== null && $entraineurNorm !== null) {
             $jt = $jtReference['reference'][$driverNorm . '||' . $entraineurNorm] ?? null;
@@ -432,6 +540,9 @@ try {
             ':quintile' => $quintile,
             ':profil' => $profil,
             ':jt_score' => $alphaScore,
+            ':cheval_score' => $chevalScore,
+            ':jockey_score' => $jockeyScore,
+            ':entraineur_score' => $entraineurScore,
             ':cote_probable' => $coteProbable,
             ':valeur_handicap' => $valeurHandicap,
             ':qualifie_q5' => $qualifieQ5,
@@ -450,6 +561,9 @@ try {
                 'driver_jockey' => $p['driver_jockey'],
                 'entraineur' => $p['entraineur'],
                 'alpha_score' => $alphaScore,
+                'cheval_score' => $chevalScore,
+                'jockey_score' => $jockeyScore,
+                'entraineur_score' => $entraineurScore,
                 'quintile' => $quintile,
                 'cote_probable' => $coteProbable,
                 'profil' => $profil,
@@ -471,6 +585,9 @@ try {
             'target_iso_included' => $jtReference['target_iso'],
             'rows_scanned' => $jtReference['rows_scanned'],
             'pairs_built' => $jtReference['pairs_built'],
+            'horses_built' => $jtReference['horses_built'],
+            'jockeys_built' => $jtReference['jockeys_built'],
+            'trainers_built' => $jtReference['trainers_built'],
         ],
         'rows_upserted' => $rowsUpserted,
         'stats' => $stats,

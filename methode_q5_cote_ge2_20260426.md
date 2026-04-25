@@ -23,10 +23,12 @@ Source des cotes :
 - À D-10, utiliser les cotes live au moment de l'exécution de la moulinette.
 - Le ticket D-10 doit être conservé tel quel après capture et ne doit pas être recalculé après la course.
 
-Source des valeurs jockey/entraîneur :
+Source des valeurs cheval/jockey/entraîneur :
 - Calculer les valeurs au jour de la course depuis l'historique `C:\Users\rigai\Desktop\pmu_data\pmu.db`.
 - Utiliser uniquement les partants historiques depuis `2025-01-01` inclus.
 - Inclure la date analysée et exclure les dates postérieures : historique `<= jour de course`.
+- Enregistrer séparément `cheval_score`, `jockey_score` et `entraineur_score`.
+- Le score actif de sélection `jt_score` reste le score du couple jockey+entraîneur.
 - Ne pas utiliser la table globale `jt_reference` pour figer une valeur sans coupure temporelle.
 
 Fichiers concernés :
