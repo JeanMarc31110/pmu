@@ -1556,7 +1556,8 @@
     }
     setResultState("Mise à jour résultats", "warn");
     try {
-      setStatus("Mise à jour des résultats PMU sans relancer l'analyse D-10...");
+      setStatus("Mise à jour des résultats PMU et du bloc D-10...");
+      await refreshD10Section();
       const importJson = await refreshArrivalsOnly(date);
       const params = { date, capital: currentCapital.toFixed(2) };
       if (course) params.course = course;
