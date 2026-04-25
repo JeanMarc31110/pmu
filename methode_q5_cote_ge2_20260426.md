@@ -1,17 +1,17 @@
-# Méthode Q5 cote >= 2
+# Méthode Q5 cote 2 à 20
 
 Date d'application : 25/04/2026.
 
 Règle de qualification :
 - Conserver uniquement les chevaux en `Q5`.
 - Conserver uniquement les chevaux avec une cote disponible `>= 2`.
-- Ne plus exclure les chevaux dont la cote est supérieure à 8.
+- Exclure les chevaux dont la cote est supérieure à `20`.
 
 Tri du ticket dans une course :
 - Profil 1 : cote entre 5 et 8.
 - Profil 2 : cote entre 3 et moins de 5.
 - Profil 3 : cote entre 2 et moins de 3.
-- Profil 4 : cote supérieure à 8.
+- Profil 4 : cote supérieure à 8 et inférieure ou égale à 20.
 - Puis `jt_score` décroissant.
 - Puis `valeur_handicap` décroissante.
 

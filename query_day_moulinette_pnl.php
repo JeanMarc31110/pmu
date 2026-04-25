@@ -338,6 +338,10 @@ function loadD10DbTickets(PDO $pdo, string $date): array
         if (!is_array($selection) || !isset($selection['num'])) {
             continue;
         }
+        $cote = isset($selection['cote']) && is_numeric($selection['cote']) ? (float)$selection['cote'] : null;
+        if (pmu_uses_expanded_q5_method((string)$row['date_course']) && pmu_profile_rank_from_cote($cote, true) === null) {
+            continue;
+        }
 
         $courseDateKey = normalizeDateForLog((string)$row['date_course']);
         $courseId = $courseDateKey . '_' . $row['reunion'] . '_' . $row['course'];

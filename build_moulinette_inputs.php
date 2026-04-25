@@ -519,9 +519,13 @@ try {
         $profil = deriveProfilFromCote($coteProbable, $expandedMethod);
 
         $qualifieQ5 = ($quintile === 'Q5') ? 1 : 0;
-        $qualifieValue = ($coteProbable !== null && $coteProbable >= 2.0) ? 1 : 0;
+        $qualifieValue = (
+            $coteProbable !== null
+            && $coteProbable >= 2.0
+            && (!$expandedMethod || $coteProbable <= 20.0)
+        ) ? 1 : 0;
         $qualifieProfil = ($profil !== null) ? 1 : 0;
-        $qualifieFinal = ($qualifieQ5 && $qualifieValue && ($expandedMethod || $qualifieProfil)) ? 1 : 0;
+        $qualifieFinal = ($qualifieQ5 && $qualifieValue && $qualifieProfil) ? 1 : 0;
 
         if ($qualifieQ5) $stats['qualifies_q5']++;
         if ($qualifieValue) $stats['qualifies_value']++;
