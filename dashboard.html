@@ -875,15 +875,27 @@
     return null;
   }
 
-  async function callScript(script, params = {}) {
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function callScript(script, params = {}, attempt = 1) {
     const url = new URL(`${BASE_URL}/${script}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    const res = await fetch(url.toString());
-    const txt = await res.text();
-    const json = safeParseJson(txt);
-    if (!json) throw new Error(`Réponse non JSON sur ${script}`);
-    if (!json.success) throw new Error(json.message || `Erreur sur ${script}`);
-    return json;
+    try {
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      const txt = await res.text();
+      const json = safeParseJson(txt);
+      if (!json) throw new Error(`Réponse non JSON sur ${script}`);
+      if (!json.success) throw new Error(json.message || `Erreur sur ${script}`);
+      return json;
+    } catch (err) {
+      if (attempt < 2 && String(err?.message || err).includes("Failed to fetch")) {
+        await wait(1000);
+        return callScript(script, params, attempt + 1);
+      }
+      throw err;
+    }
   }
 
   async function postJsonScript(script, payload = {}) {
@@ -1558,7 +1570,13 @@
     try {
       setStatus("Mise à jour des résultats PMU et du bloc D-10...");
       await refreshD10Section();
-      const importJson = await refreshArrivalsOnly(date);
+      let importJson = null;
+      try {
+        importJson = await refreshArrivalsOnly(date);
+      } catch (err) {
+        console.warn("Mise à jour arrivées indisponible, calcul des gains conservé", err);
+        importJson = { total_courses_processed: 0, total_arrivees_inserted: 0 };
+      }
       const params = { date, capital: currentCapital.toFixed(2) };
       if (course) params.course = course;
       const pnlJson = await callScript("query_day_moulinette_pnl.php", params);
