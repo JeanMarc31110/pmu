@@ -803,13 +803,11 @@
     $("bankrollInput").value = String(currentCapital);
     saveCapital(currentCapital);
     $("currentCapitalLabel").textContent = formatCapitalLabel(currentCapital);
-    refreshD10Section();
   });
   document.querySelectorAll(".quick-btn").forEach(btn => {
     btn.addEventListener("click", () => setDate(addDays(isoToday(), parseInt(btn.dataset.offset, 10))));
   });
   refreshD10Section();
-  setInterval(refreshD10Section, 30000);
 
   $("multiToggle").addEventListener("change", e => {
     $("multiSection").classList.toggle("visible", e.target.checked);
@@ -898,7 +896,7 @@
   }
 
   async function captureD10Due(date) {
-    return callScript("capture_d10_due.php", { date });
+    return callScript("capture_d10_due_test.php", { date });
   }
 
   function renderImportResult(lines) {
@@ -1355,13 +1353,6 @@
         .filter(row => row.minutes_left !== null && row.minutes_left >= 0 && row.minutes_left <= ANALYSIS_WINDOW_MINUTES)
         .sort((a, b) => a.minutes_left - b.minutes_left);
       const recalculatedRows = await recalculateD10Tickets(liveRows, iso);
-      const selectedRows = recalculatedRows.filter(row => row.selection);
-      if (selectedRows.length) {
-        await postJsonScript("save_d10_analysis_snapshot.php", {
-          date: toJJMMAAAA(iso),
-          rows: selectedRows,
-        });
-      }
       $("d10Results").innerHTML = renderD10Card(recalculatedRows, iso);
     } catch (err) {
       $("d10Results").innerHTML = `
