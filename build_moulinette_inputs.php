@@ -115,7 +115,7 @@ function buildTemporalJtReference(string $historicalDbPath, string $date, int $m
             ordreArrivee
         FROM partants
         WHERE db_date_iso >= :history_start
-          AND db_date_iso < :target_date
+          AND db_date_iso <= :target_date
           AND COALESCE(NULLIF(TRIM(driver), ''), NULLIF(TRIM(jockey), '')) IS NOT NULL
           AND NULLIF(TRIM(entraineur), '') IS NOT NULL
     ");
@@ -468,7 +468,7 @@ try {
         'jt_reference_source' => [
             'db_path' => $historicalDbPath,
             'history_start_iso' => $jtReference['history_start_iso'],
-            'target_iso_excluded' => $jtReference['target_iso'],
+            'target_iso_included' => $jtReference['target_iso'],
             'rows_scanned' => $jtReference['rows_scanned'],
             'pairs_built' => $jtReference['pairs_built'],
         ],

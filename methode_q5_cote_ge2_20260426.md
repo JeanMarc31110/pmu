@@ -26,7 +26,7 @@ Source des cotes :
 Source des valeurs jockey/entraîneur :
 - Calculer les valeurs au jour de la course depuis l'historique `C:\Users\rigai\Desktop\pmu_data\pmu.db`.
 - Utiliser uniquement les partants historiques depuis `2025-01-01` inclus.
-- Exclure la date analysée et toutes les dates postérieures : historique `< jour de course`.
+- Inclure la date analysée et exclure les dates postérieures : historique `<= jour de course`.
 - Ne pas utiliser la table globale `jt_reference` pour figer une valeur sans coupure temporelle.
 
 Fichiers concernés :
