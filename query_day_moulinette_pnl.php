@@ -171,6 +171,9 @@ function extractCourseOrder(?string $rawJson): ?string
 
     $values = [];
     foreach ($order as $item) {
+        if (count($values) >= 4) {
+            break;
+        }
         if (is_array($item)) {
             if (!empty($item)) {
                 $values[] = implode('-', array_map('strval', $item));
@@ -186,7 +189,7 @@ function extractCourseOrder(?string $rawJson): ?string
         return null;
     }
 
-    return implode(' | ', $values);
+    return implode(' | ', array_slice($values, 0, 4));
 }
 
 function extractSelectedOrderFromCourseRaw(?string $rawJson, int $numPmu): ?int

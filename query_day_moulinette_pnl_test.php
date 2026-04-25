@@ -73,10 +73,13 @@ function extractCourseOrder(?string $rawJson): ?string
     }
     $values = [];
     foreach ($order as $item) {
+        if (count($values) >= 4) {
+            break;
+        }
         $cell = is_array($item) ? $item : [$item];
         $values[] = implode('-', array_map('strval', $cell));
     }
-    return implode(' | ', array_filter($values, static fn($value) => $value !== ''));
+    return implode(' | ', array_slice(array_filter($values, static fn($value) => $value !== ''), 0, 4));
 }
 
 function extractSelectedOrderFromCourseRaw(?string $rawJson, int $numPmu): ?int
