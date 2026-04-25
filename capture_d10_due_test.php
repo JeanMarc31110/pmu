@@ -55,6 +55,12 @@ try {
     if (!$date) {
         throw new RuntimeException('Date invalide. Format attendu : JJMMAAAA');
     }
+    $reunionFilter = isset($_GET['reunion']) && trim((string)$_GET['reunion']) !== ''
+        ? strtoupper(trim((string)$_GET['reunion']))
+        : null;
+    $courseFilter = isset($_GET['course']) && trim((string)$_GET['course']) !== ''
+        ? strtoupper(trim((string)$_GET['course']))
+        : null;
 
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -80,9 +86,18 @@ try {
         FROM courses
         WHERE date_course = :date
           AND heure_depart IS NOT NULL
+          " . ($reunionFilter !== null ? "AND UPPER(reunion) = :reunion" : "") . "
+          " . ($courseFilter !== null ? "AND UPPER(course) = :course" : "") . "
         ORDER BY CAST(heure_depart AS INTEGER), reunion, course
     ");
-    $stmt->execute([':date' => $date]);
+    $courseParams = [':date' => $date];
+    if ($reunionFilter !== null) {
+        $courseParams[':reunion'] = $reunionFilter;
+    }
+    if ($courseFilter !== null) {
+        $courseParams[':course'] = $courseFilter;
+    }
+    $stmt->execute($courseParams);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $stmtExists = $pdo->prepare("
@@ -166,6 +181,8 @@ try {
         'success' => true,
         'mode' => 'test_live_d10_no_snapshot',
         'date' => $date,
+        'reunion' => $reunionFilter,
+        'course' => $courseFilter,
         'due_count' => $dueCount,
         'saved' => $saved,
         'already_present' => $alreadyPresent,
