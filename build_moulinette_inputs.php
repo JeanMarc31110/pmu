@@ -10,6 +10,9 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 $dbPath = __DIR__ . '/data/pmu.sqlite';
+$historicalDbPath = 'C:/Users/rigai/Desktop/pmu_data/pmu.db';
+const PMU_HISTORY_START_ISO = '2025-01-01';
+
 require_once __DIR__ . '/method_config.php';
 
 function parseNumeric($value): ?float
@@ -43,6 +46,159 @@ function deriveProfilFromCote(?float $cote, bool $expandedMethod = false): ?int
     return pmu_profile_rank_from_cote($cote, $expandedMethod);
 }
 
+function dateToIsoForHistory(string $date): ?string
+{
+    $ymd = pmu_date_to_ymd($date);
+    if ($ymd === null) {
+        return null;
+    }
+
+    return substr($ymd, 0, 4) . '-' . substr($ymd, 4, 2) . '-' . substr($ymd, 6, 2);
+}
+
+function parseArrivalRank($value): ?int
+{
+    if ($value === null) {
+        return null;
+    }
+
+    $value = trim((string)$value);
+    if ($value === '' || !is_numeric($value)) {
+        return null;
+    }
+
+    return (int)$value;
+}
+
+function computeAlphaScore(int $nbCourses, int $wins, int $places23, int $places45): float
+{
+    if ($nbCourses <= 0) {
+        return 0.0;
+    }
+
+    return round(((5 * $wins) + (3 * $places23) + $places45) / $nbCourses, 4);
+}
+
+function quintileLabelFromRank(int $index, int $total): string
+{
+    if ($total <= 0) {
+        return 'Q1';
+    }
+
+    $ratio = ($index + 1) / $total;
+
+    if ($ratio <= 0.20) return 'Q5';
+    if ($ratio <= 0.40) return 'Q4';
+    if ($ratio <= 0.60) return 'Q3';
+    if ($ratio <= 0.80) return 'Q2';
+    return 'Q1';
+}
+
+function buildTemporalJtReference(string $historicalDbPath, string $date, int $minCourses = 3): array
+{
+    if (!file_exists($historicalDbPath)) {
+        throw new Exception("Base historique introuvable : " . $historicalDbPath);
+    }
+
+    $targetIso = dateToIsoForHistory($date);
+    if ($targetIso === null) {
+        throw new Exception("Date invalide pour l'historique : " . $date);
+    }
+
+    $history = new PDO('sqlite:' . $historicalDbPath);
+    $history->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $stmt = $history->prepare("
+        SELECT
+            COALESCE(NULLIF(TRIM(driver), ''), NULLIF(TRIM(jockey), '')) AS driver_jockey,
+            entraineur,
+            ordre_arrivee,
+            ordreArrivee
+        FROM partants
+        WHERE db_date_iso >= :history_start
+          AND db_date_iso < :target_date
+          AND COALESCE(NULLIF(TRIM(driver), ''), NULLIF(TRIM(jockey), '')) IS NOT NULL
+          AND NULLIF(TRIM(entraineur), '') IS NOT NULL
+    ");
+    $stmt->execute([
+        ':history_start' => PMU_HISTORY_START_ISO,
+        ':target_date' => $targetIso,
+    ]);
+
+    $agg = [];
+    $rowsScanned = 0;
+
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $rowsScanned++;
+        $driver = normalizeName($row['driver_jockey'] ?? null);
+        $entraineur = normalizeName($row['entraineur'] ?? null);
+
+        if ($driver === null || $entraineur === null) {
+            continue;
+        }
+
+        $key = $driver . '||' . $entraineur;
+        if (!isset($agg[$key])) {
+            $agg[$key] = [
+                'driver_jockey_norm' => $driver,
+                'entraineur_norm' => $entraineur,
+                'nb_courses' => 0,
+                'wins' => 0,
+                'places23' => 0,
+                'places45' => 0,
+            ];
+        }
+
+        $agg[$key]['nb_courses']++;
+        $ordre = parseArrivalRank($row['ordre_arrivee'] ?? null) ?? parseArrivalRank($row['ordreArrivee'] ?? null);
+
+        if ($ordre === 1) {
+            $agg[$key]['wins']++;
+        } elseif ($ordre === 2 || $ordre === 3) {
+            $agg[$key]['places23']++;
+        } elseif ($ordre === 4 || $ordre === 5) {
+            $agg[$key]['places45']++;
+        }
+    }
+
+    $couples = array_values(array_filter($agg, function (array $row) use ($minCourses): bool {
+        return $row['nb_courses'] >= $minCourses;
+    }));
+
+    foreach ($couples as &$couple) {
+        $couple['alpha_score'] = computeAlphaScore(
+            $couple['nb_courses'],
+            $couple['wins'],
+            $couple['places23'],
+            $couple['places45']
+        );
+    }
+    unset($couple);
+
+    usort($couples, function (array $a, array $b): int {
+        if ($a['alpha_score'] !== $b['alpha_score']) {
+            return $b['alpha_score'] <=> $a['alpha_score'];
+        }
+        return $b['nb_courses'] <=> $a['nb_courses'];
+    });
+
+    $reference = [];
+    $total = count($couples);
+    foreach ($couples as $index => $couple) {
+        $reference[$couple['driver_jockey_norm'] . '||' . $couple['entraineur_norm']] = [
+            'alpha_score' => $couple['alpha_score'],
+            'quintile' => quintileLabelFromRank($index, $total),
+        ];
+    }
+
+    return [
+        'target_iso' => $targetIso,
+        'history_start_iso' => PMU_HISTORY_START_ISO,
+        'rows_scanned' => $rowsScanned,
+        'pairs_built' => count($reference),
+        'reference' => $reference,
+    ];
+}
+
 function json_response(array $payload): void
 {
     while (ob_get_level() > 0) {
@@ -69,6 +225,7 @@ try {
         throw new Exception("Paramètre requis : date");
     }
     $expandedMethod = pmu_uses_expanded_q5_method((string)$date);
+    $jtReference = buildTemporalJtReference($historicalDbPath, (string)$date);
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS jt_reference (
@@ -156,14 +313,6 @@ try {
     $stmtParticipants->execute($params);
     $participants = $stmtParticipants->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmtJT = $pdo->prepare("
-        SELECT alpha_score, quintile
-        FROM jt_reference
-        WHERE driver_jockey_norm = :driver_jockey_norm
-          AND entraineur_norm = :entraineur_norm
-        LIMIT 1
-    ");
-
     $stmtOdds = $pdo->prepare("
         SELECT cote_probable
         FROM market_odds
@@ -231,11 +380,7 @@ try {
         $quintile = null;
 
         if ($driverNorm !== null && $entraineurNorm !== null) {
-            $stmtJT->execute([
-                ':driver_jockey_norm' => $driverNorm,
-                ':entraineur_norm' => $entraineurNorm
-            ]);
-            $jt = $stmtJT->fetch(PDO::FETCH_ASSOC);
+            $jt = $jtReference['reference'][$driverNorm . '||' . $entraineurNorm] ?? null;
 
             if ($jt) {
                 $alphaScore = parseNumeric($jt['alpha_score']);
@@ -320,6 +465,13 @@ try {
         'success' => true,
         'date' => $date,
         'method' => $expandedMethod ? PMU_EXPANDED_Q5_SOURCE_MODE : 'strict_method_2026',
+        'jt_reference_source' => [
+            'db_path' => $historicalDbPath,
+            'history_start_iso' => $jtReference['history_start_iso'],
+            'target_iso_excluded' => $jtReference['target_iso'],
+            'rows_scanned' => $jtReference['rows_scanned'],
+            'pairs_built' => $jtReference['pairs_built'],
+        ],
         'rows_upserted' => $rowsUpserted,
         'stats' => $stats,
         'summary' => $summary
